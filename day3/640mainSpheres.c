@@ -42,19 +42,19 @@ void getIntersection(
     rSq = r * r;
     disc = dPMinusC * dPMinusC - dD * (vecDot(3, pMinusC, pMinusC) - rSq);
     if (disc <= 0) {
-    inter->t = rayNONE;
-    return;
+        inter->t = rayNONE;
+        return;
     }
     disc = sqrt(disc);
     t = (-dPMinusC - disc) / dD;
     if (rayEPSILON <= t && t <= bound) {
-    inter->t = t;
-    return;
+        inter->t = t;
+        return;
     }
     t = (-dPMinusC + disc) / dD;
     if (rayEPSILON <= t && t <= bound) {
-    inter->t = t;
-    return;
+        inter->t = t;
+        return;
     }
     inter->t = rayNONE;
 }
@@ -108,16 +108,42 @@ void finalizeArtwork(void) {
 the background) and loads the color into the rgb parameter. */
 void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
     /* YOUR CODE GOES HERE. (MINE IS 16 LINES.) */
-    
+    double bound = rayINFINITY;
+    rayIntersection tempWin;
+    tempWin.t = rayINFINITY;
+    int tempi;
     for (int i = 0; i < BODYNUM; i++)
     {
         /* code */
         rayIntersection inter;
-        getIntersection(radii[i], &(isoms[0]), p, d, 
-        rayINFINITY, &inter);
-        
+        getIntersection(radii[i], &(isoms[i]), p, d, 
+        bound, &inter);
+        bound = inter.t;
+        if (bound != rayNONE)
+        {
+            if (tempWin.t == rayINFINITY)
+            {
+                if (bound < tempWin.t)
+                {
+                    tempWin = inter;
+                    tempi = i;
+                    
+                }
+                
+            }else{
+                tempWin = inter;
+            }
+            
+        }
     }
-    
+    if (bound == rayNONE)
+    {
+        vec3Set(0.0,0.0,0.0,rgb);
+    }else
+    {
+        rgb = colors[tempi];
+    }
+
     
 }
 
@@ -125,8 +151,23 @@ void render(void) {
     /* Build a 4x4 matrix that (along with homogeneous division) takes screen 
     coordinates (x0, x1, 0, 1) to the corresponding world coordinates. */
     /* YOUR CODE GOES HERE. (MINE IS 10 LINES.) */
+
     /* Declare p and maybe compute d. */
     double p[4], d[3];
+    double view[4][4];
+    double proj[4][4];
+    double Xscreen[4];
+    double viewXproj[4][4];
+    double dRot[3] = {0.0,0.0,-1.0};
+
+    
+
+    if (camera.projectionType == 0)
+    {
+        isoRotateDirection(&camera.isometry, dRot, d);
+    }
+    
+    
     /* YOUR CODE GOES HERE. (MINE IS 4 LINES.) */
     /* Each screen point is chosen to be on the near plane. */
     double screen[4] = {0.0, 0.0, 0.0, 1.0};
@@ -135,7 +176,22 @@ void render(void) {
         for (int j = 0; j < SCREENHEIGHT; j += 1) {
             screen[1] = j;
             /* Compute p and maybe also d. */
+            
+            mat44InverseViewport(SCREENWIDTH, SCREENHEIGHT, view);
+            
+            camGetInversePerspective(&camera, proj);
+            mat444Multiply(view,proj,viewXproj);
+            mat441Multiply(viewXproj,screen,Xscreen);
+            double homog[4][4];
+            //what is C
+            isoGetHomogeneous(&camera.isometry, homog);
+            mat441Multiply(homog,Xscreen,p);
             /* YOUR CODE GOES HERE. (MINE IS 4 LINES.) */
+            if (camera.projectionType == 1)
+            {
+                //pcamera is translation
+                vecSubtract(3, p, camera.isometry.translation, d);
+            }
             /* Set the pixel to the color of that ray. */
             double rgb[3];
             getSceneColor(p, d, rgb);
