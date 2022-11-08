@@ -107,41 +107,27 @@ void finalizeArtwork(void) {
 /* Given a ray x(t) = p + t d. Finds the color where that ray hits the scene (or 
 the background) and loads the color into the rgb parameter. */
 void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
-    /* YOUR CODE GOES HERE. (MINE IS 16 LINES.) */
     double bound = rayINFINITY;
-    rayIntersection tempWin;
-    tempWin.t = rayINFINITY;
-    int tempi;
+    rayIntersection bestInter;
+    int bestI = -1;
     for (int i = 0; i < BODYNUM; i++)
     {
-        /* code */
         rayIntersection inter;
-        getIntersection(radii[i], &(isoms[i]), p, d, 
-        bound, &inter);
-        bound = inter.t;
-        if (bound != rayNONE)
+        getIntersection(radii[i], &(isoms[i]), p, d, bound, &inter);
+        if (inter.t != rayNONE)
         {
-            if (tempWin.t == rayINFINITY)
-            {
-                if (bound < tempWin.t)
-                {
-                    tempWin = inter;
-                    tempi = i;
-                    
-                }
-                
-            }else{
-                tempWin = inter;
-            }
+            bound = inter.t;
+            bestI = i;
+            bestInter = inter;
             
         }
     }
-    if (bound == rayNONE)
+    if (bestI == -1)
     {
         vec3Set(0.0,0.0,0.0,rgb);
     }else
     {
-        rgb = colors[tempi];
+        rgb = colors[bestI];
     }
 
     
@@ -150,21 +136,31 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
 void render(void) {
     /* Build a 4x4 matrix that (along with homogeneous division) takes screen 
     coordinates (x0, x1, 0, 1) to the corresponding world coordinates. */
-    /* YOUR CODE GOES HERE. (MINE IS 10 LINES.) */
-
+    double invView[4][4];
+    double invProj[4][4];
+    double Xscreen[4];
+    double invProjXinvView[4][4];
+    double camMatrix[4][4];
+    double camXprojview[4][4];
+    if(camera.projectionType == camPERSPECTIVE){
+        mat44InverseViewport(SCREENWIDTH, SCREENHEIGHT, invView);
+        camGetInversePerspective(&camera, invProj);
+        mat444Multiply(invProj, invView,invProjXinvView);
+        isoGetHomogeneous(&camera.isometry, camMatrix);
+        mat444Multiply(camMatrix, invProjXinvView,camXprojview);
+    }
     /* Declare p and maybe compute d. */
     double p[4], d[3];
-    double view[4][4];
-    double proj[4][4];
-    double Xscreen[4];
-    double viewXproj[4][4];
-    double dRot[3] = {0.0,0.0,-1.0};
+
 
     
-
-    if (camera.projectionType == 0)
+    
+    double camRot[3] = {0.0,0.0,-1.0};
+    double dRot[3];
+    if (camera.projectionType == camORTHOGRAPHIC)
     {
-        isoRotateDirection(&camera.isometry, dRot, d);
+        isoRotateDirection(&camera.isometry, camRot, dRot);
+        mat331Multiply(camera.isometry.rotation, dRot, d);
     }
     
     
@@ -176,21 +172,14 @@ void render(void) {
         for (int j = 0; j < SCREENHEIGHT; j += 1) {
             screen[1] = j;
             /* Compute p and maybe also d. */
-            
-            mat44InverseViewport(SCREENWIDTH, SCREENHEIGHT, view);
-            
-            camGetInversePerspective(&camera, proj);
-            mat444Multiply(view,proj,viewXproj);
-            mat441Multiply(viewXproj,screen,Xscreen);
-            double homog[4][4];
-            //what is C
-            isoGetHomogeneous(&camera.isometry, homog);
-            mat441Multiply(homog,Xscreen,p);
-            /* YOUR CODE GOES HERE. (MINE IS 4 LINES.) */
-            if (camera.projectionType == 1)
+            mat441Multiply(camXprojview,screen,p);
+            vecScale(4, 1.0/p[3], p, p);
+            double pCam[3];
+            vec3Set(camera.isometry.translation[0], camera.isometry.translation[1], camera.isometry.translation[2], pCam);
+            if (camera.projectionType == camPERSPECTIVE)
             {
                 //pcamera is translation
-                vecSubtract(3, p, camera.isometry.translation, d);
+                vecSubtract(3, p, pCam, d);
             }
             /* Set the pixel to the color of that ray. */
             double rgb[3];
