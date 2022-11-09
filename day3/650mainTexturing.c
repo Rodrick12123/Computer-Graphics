@@ -1,5 +1,5 @@
 
-//Jerimah Vic
+//Jeremiah  Vic
 
 /* On macOS, compile with...
     clang 650mainTexturing.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
@@ -11,7 +11,7 @@ On Ubuntu, compile with...
 #include <GLFW/glfw3.h>
 #include "040pixel.h"
 
-#include "250vector.c"
+#include "650vector.c"
 #include "280matrix.c"
 #include "300isometry.c"
 #include "300camera.c"
@@ -97,7 +97,7 @@ int initializeArtwork(void) {
     isoSetTranslation(&(isoms[2]), transl);
     vec3Set(0.0, 0.0, 1.0, transl);
     isoSetTranslation(&(isoms[3]), transl);
-    if ( texInitializeFile(&tex, "drogba.jpeg") != 0) {
+    if ( texInitializeFile(&tex, "borealis.jpeg") != 0) {
         pixFinalize();
         return 1;
     }
@@ -118,18 +118,26 @@ void getTexCoordsAndNormal(
         double r, const isoIsometry *isom, const double p[3], const double d[3], 
         const rayIntersection* inter, double texCoords[2], double normal[3]){
             double locX[3];
-            isoUntransformPoint(isom, p, locX);
-            double phi = locX[1];
-            double thetha = locX[2];
-            texCoords[0] = thetha/(2*M_PI);
-            texCoords[1] = 1 - (phi/M_PI);
-            double c[2];
-            vecCopy(2, isom->translation, c);
-            double tPlusd[3];
             double x[3];
-            vecScale(3, inter->t, d, tPlusd);
-            vecAdd(3, p, tPlusd, x);
+            double tTimesd[3];
+            double c[2];
             double xMinusc[3];
+
+            vecCopy(3, isom->translation, c);
+            vecScale(3, inter->t, d, tTimesd);
+            vecAdd(3, p, tTimesd, x);
+            
+            
+            double rho;
+            double phi;
+            double theta;
+
+            isoUntransformPoint(isom, x, locX);
+            vec3Rectangular(locX, &rho, &phi, &theta);
+
+            texCoords[0] = theta/(2*M_PI);
+            texCoords[1] = 1 - (phi/M_PI);
+
             vecSubtract(3,x,c,xMinusc);
             vecUnit(3, xMinusc, normal);
 
@@ -148,7 +156,6 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
     {
         rayIntersection inter;
         getIntersection(radii[i], &(isoms[i]), p, d, bound, &inter);
-        //printf("inter.t: %f\n", inter.t);
         if (inter.t != rayNONE)
         {
             bound = inter.t;
@@ -160,19 +167,26 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
     //printf("bestI: %d\n", bestI);
     if (bestI == -1)
     {
-        vec3Set(0.0,0.0,0.0,rgb);
+        vec3Set(1.0,1.0,1.0,rgb);
     }else
     {
         vecCopy(3, colors[bestI], rgb);
+        double texCoor[2];
+    double normal[3];
+    double sampleTex[tex.texelDim];
+    getTexCoordsAndNormal(radii[bestI], &(isoms[bestI]), p, d, &bestInter, texCoor, normal);
+    texSample(&tex,texCoor[0],texCoor[1], sampleTex);
+    // vec3Set(texCoor[0], texCoor[1], 1, texCoor);
+    vecModulate(3, sampleTex, rgb, rgb);
         
     }
-    double texCoor[2];
-    double normal[3];
-    double samTex[3];
-    getTexCoordsAndNormal(radii[bestI], &(isoms[bestI]), p, d, &bestInter, texCoor, normal);
-    texSample(&tex,texCoor[0],texCoor[1], samTex);
-    // vec3Set(texCoor[0], texCoor[1], 1, texCoor);
-    vecModulate(3, samTex, rgb, rgb);
+    // double texCoor[2];
+    // double normal[3];
+    // double samTex[3];
+    // getTexCoordsAndNormal(radii[bestI], &(isoms[bestI]), p, d, &bestInter, texCoor, normal);
+    // texSample(&tex,texCoor[0],texCoor[1], samTex);
+    // // vec3Set(texCoor[0], texCoor[1], 1, texCoor);
+    // vecModulate(3, samTex, rgb, rgb);
     
 
     
@@ -230,7 +244,6 @@ void render(void) {
             /* Set the pixel to the color of that ray. */
             double rgb[3];
             getSceneColor(p, d, rgb);
-
             pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
             
             
