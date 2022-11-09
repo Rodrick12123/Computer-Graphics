@@ -143,12 +143,15 @@ void render(void) {
     double camMatrix[4][4];
     double camXprojview[4][4];
     if(camera.projectionType == camPERSPECTIVE){
-        mat44InverseViewport(SCREENWIDTH, SCREENHEIGHT, invView);
         camGetInversePerspective(&camera, invProj);
-        mat444Multiply(invProj, invView,invProjXinvView);
-        isoGetHomogeneous(&camera.isometry, camMatrix);
-        mat444Multiply(camMatrix, invProjXinvView,camXprojview);
     }
+    else if (camera.projectionType == camORTHOGRAPHIC){
+        camGetInverseOrthographic(&camera, invProj);
+    }
+    mat44InverseViewport(SCREENWIDTH, SCREENHEIGHT, invView);
+    mat444Multiply(invProj, invView,invProjXinvView);
+    isoGetHomogeneous(&camera.isometry, camMatrix);
+    mat444Multiply(camMatrix, invProjXinvView,camXprojview);
     /* Declare p and maybe compute d. */
     double p[4], d[3];
 
@@ -156,11 +159,9 @@ void render(void) {
     
     
     double camRot[3] = {0.0,0.0,-1.0};
-    double dRot[3];
     if (camera.projectionType == camORTHOGRAPHIC)
     {
-        isoRotateDirection(&camera.isometry, camRot, dRot);
-        mat331Multiply(camera.isometry.rotation, dRot, d);
+        isoRotateDirection(&camera.isometry, camRot, d);
     }
     
     
