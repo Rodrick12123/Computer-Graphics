@@ -2,7 +2,7 @@
 //Jerimah Vic
 
 /* On macOS, compile with...
-    clang 640mainSpheres.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 650mainTexturing.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -16,6 +16,7 @@ On Ubuntu, compile with...
 #include "300isometry.c"
 #include "300camera.c"
 #include "640ray.c"
+#include "150texture.c"
 
 #define SCREENWIDTH 512
 #define SCREENHEIGHT 512
@@ -77,6 +78,9 @@ double colors[BODYNUM][3] = {
     {0.0, 1.0, 0.0}, 
     {0.0, 0.0, 1.0}};
 
+texTexture tex;
+
+
 int initializeArtwork(void) {
     camSetProjectionType(&camera, camPERSPECTIVE);
     camSetFrustum(
@@ -93,6 +97,12 @@ int initializeArtwork(void) {
     isoSetTranslation(&(isoms[2]), transl);
     vec3Set(0.0, 0.0, 1.0, transl);
     isoSetTranslation(&(isoms[3]), transl);
+    if ( texInitializeFile(&tex, "drogba.jpeg") != 0) {
+        pixFinalize();
+        return 1;
+    }
+
+
     return 0;
 }
 
@@ -100,8 +110,33 @@ void finalizeArtwork(void) {
     return;
 }
 
+/*** RENDERING ****************************************************************/
+/* Given the sphere that just produced the given rayIntersection. Outputs the 
+sphere's texture coordinates at the intersection point. Also outputs the 
+sphere's unit outward-pointing normal vector there, in world coordinates. */
+void getTexCoordsAndNormal(
+        double r, const isoIsometry *isom, const double p[3], const double d[3], 
+        const rayIntersection* inter, double texCoords[2], double normal[3]){
+            double locX[3];
+            isoUntransformPoint(isom, p, locX);
+            double phi = locX[1];
+            double thetha = locX[2];
+            texCoords[0] = thetha/(2*M_PI);
+            texCoords[1] = 1 - (phi/M_PI);
+            double c[2];
+            vecCopy(2, isom->translation, c);
+            double tPlusd[3];
+            double x[3];
+            vecScale(3, inter->t, d, tPlusd);
+            vecAdd(3, p, tPlusd, x);
+            double xMinusc[3];
+            vecSubtract(3,x,c,xMinusc);
+            vecUnit(3, xMinusc, normal);
 
 
+    }
+
+/*** RENDERING ****************************************************************/
 
 /* Given a ray x(t) = p + t d. Finds the color where that ray hits the scene (or 
 the background) and loads the color into the rgb parameter. */
@@ -116,18 +151,11 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
         //printf("inter.t: %f\n", inter.t);
         if (inter.t != rayNONE)
         {
-            // bound = inter.t;
-            // bestI = i;
-            // bestInter = inter;
-            if (bound > inter.t)
-            {
-                bound = inter.t;
-                bestI = i;
-                bestInter = inter;
-            }
+            bound = inter.t;
+            bestI = i;
+            bestInter = inter;
             
         }
-        
     }
     //printf("bestI: %d\n", bestI);
     if (bestI == -1)
@@ -138,6 +166,15 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
         vecCopy(3, colors[bestI], rgb);
         
     }
+    double texCoor[2];
+    double normal[3];
+    double samTex[3];
+    getTexCoordsAndNormal(radii[bestI], &(isoms[bestI]), p, d, &bestInter, texCoor, normal);
+    texSample(&tex,texCoor[0],texCoor[1], samTex);
+    // vec3Set(texCoor[0], texCoor[1], 1, texCoor);
+    vecModulate(3, samTex, rgb, rgb);
+    
+
     
 }
 
@@ -193,7 +230,7 @@ void render(void) {
             /* Set the pixel to the color of that ray. */
             double rgb[3];
             getSceneColor(p, d, rgb);
-            printf("r: %f, g: %f, b:%f\n", rgb[0], rgb[1], rgb[2]);
+
             pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
             
             
@@ -254,6 +291,7 @@ int main(void) {
     pixSetKeyRepeatHandler(handleKey);
     pixSetTimeStepHandler(handleTimeStep);
     pixRun();
+    texFinalize(&tex);
     finalizeArtwork();
     pixFinalize();
     return 0;
