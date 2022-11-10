@@ -44,11 +44,8 @@ double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 #define BODYNUM 4
 // isoIsometry isoms[BODYNUM];
 // double radii[BODYNUM] = {1.0, 0.5, 0.5, 0.5};
-bodyBody body1;
-bodyBody body2;
-bodyBody body3;
-bodyBody body4;
-bodyBody *bodyArray[BODYNUM] = {&body1, &body2, &body3, &body4};
+
+bodyBody bodyArray[BODYNUM]; 
 double cAmbient[3] = {1.0/4.0, 1.0/4.0, 1.0/4.0};
 
 
@@ -84,7 +81,7 @@ int initializeArtwork(void) {
     camLookAt(&camera, cameraTarget, cameraRho, cameraPhi, cameraTheta);
     double rot[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
     for (int k = 0; k < BODYNUM; k += 1)
-        isoSetRotation(&(bodyArray[k]->isometry), rot);
+        isoSetRotation(&(bodyArray[k].isometry), rot);
 
     // double transl[3] = {0.0, 0.0, 0.0};
     // isoSetTranslation(&(isoms[0]), transl);
@@ -111,54 +108,60 @@ int initializeArtwork(void) {
         return 1;
     }
     
-    bodyInitialize(bodyArray[0], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[0], 1, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
-    vec3Set(1.0, 0.0, 0.0, bodyArray[0]->isometry.translation);
-    bodySetTexture(bodyArray[0], 0, &texture);
+    
+    bodySetTexture(&bodyArray[0], 0, &texture);
     // bodyArray[0]->textures = tex[0];
     //set radious from radii
     double data[1] = {1.0};
-    bodySetGeometryUniforms(bodyArray[0], 0, data, 1);
+    bodySetGeometryUniforms(&bodyArray[0], 0, data, 1);
 
-    bodyInitialize(bodyArray[1], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[1], 1, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
-    vec3Set(0.0, 1.0, 0.0, bodyArray[1]->isometry.translation);
-    bodySetTexture(bodyArray[1], 0, &texture2);
+
+    bodySetTexture(&bodyArray[1], 0, &texture2);
     // bodyArray[1]->textures = tex[1];
     //set radious from radii
     double data2[1] = {0.5};
-    bodySetGeometryUniforms(bodyArray[1], 0, data2, 1);
+    bodySetGeometryUniforms(&bodyArray[1], 0, data2, 1);
 
-    bodyInitialize(bodyArray[2], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[2], 1, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
-    vec3Set(0.0, 0.0, 1.0, bodyArray[2]->isometry.translation);
-    bodySetTexture(bodyArray[2], 0, &texture3);
+
+    bodySetTexture(&bodyArray[2], 0, &texture3);
     // bodyArray[1]->textures = tex[2];
     //set radious from radii
     double data3[1] = {0.5};
-    bodySetGeometryUniforms(bodyArray[2], 0, data3, 1);
+    bodySetGeometryUniforms(&bodyArray[2], 0, data3, 1);
 
-    bodyInitialize(bodyArray[3], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[3], 1, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
-    vec3Set(1.0, 0.0, 1.0, bodyArray[3]->isometry.translation);
-    bodySetTexture(bodyArray[3], 0, &texture4);
+
+    bodySetTexture(&bodyArray[3], 0, &texture4);
     // bodyArray[3]->textures = tex[3];
     //set radious from radii
     double data4[1] = {0.5};
-    bodySetGeometryUniforms(bodyArray[3], 0, data4, 1);
+    bodySetGeometryUniforms(&bodyArray[3], 0, data4, 1);
 
 
-    
-
+    double transl[3] = {0.0, 0.0, 0.0};
+    isoSetTranslation(&bodyArray[0].isometry, transl);
+    vec3Set(1.0, 0.0, 0.0, transl);
+    isoSetTranslation(&bodyArray[1].isometry, transl);
+    vec3Set(0.0, 1.0, 0.0, transl);
+    isoSetTranslation(&bodyArray[2].isometry, transl);
+    vec3Set(0.0, 0.0, 1.0, transl);
+    isoSetTranslation(&bodyArray[3].isometry, transl);
 
     return 0;
 }
 
 void finalizeArtwork(void) {
-    bodyFinalize(&body1);
-    bodyFinalize(&body3);
-    bodyFinalize(&body2);
-    bodyFinalize(&body4);
+    bodyFinalize(&bodyArray[0]);
+    bodyFinalize(&bodyArray[1]);
+    bodyFinalize(&bodyArray[2]);
+    bodyFinalize(&bodyArray[3]);
     return;
 }
 
@@ -303,7 +306,7 @@ void handleTimeStep(double oldTime, double newTime) {
     double rotMatrix[3][3];
     mat33AngleAxisRotation(newTime, rotAxis, rotMatrix);
     for (int k = 0; k < BODYNUM; k += 1)
-        isoSetRotation(&(bodyArray[k]->isometry), rotMatrix);
+        isoSetRotation(&(bodyArray[k].isometry), rotMatrix);
     render();
 }
 
