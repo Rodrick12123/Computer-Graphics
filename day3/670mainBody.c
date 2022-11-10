@@ -17,6 +17,8 @@ On Ubuntu, compile with...
 #include "300camera.c"
 #include "150texture.c"
 #include "660ray.c"
+#include "670body.c"
+#include "670sphere.c"
 
 
 #define SCREENWIDTH 512
@@ -26,39 +28,7 @@ On Ubuntu, compile with...
 
 /*** SPHERES ******************************************************************/
 
-/* Given a sphere of radius r, centered at the origin in its local coordinates. 
-Given a modeling isometry that places that sphere in the scene. Given a ray 
-x(t) = p + t d in world coordinates. Outputs a rayIntersection, whose t member 
-is the least t, in the interval [rayEPSILON, bound], when the ray intersects the 
-sphere. If there is no such t, then the t member is instead rayNONE. */
-void getIntersection(
-        double r, const isoIsometry *isom, const double p[3], const double d[3], 
-        double bound, rayIntersection* inter) {
-    double c[3];
-    vecCopy(3, isom->translation, c);
-    double pMinusC[3], dPMinusC, dD, rSq, disc, t;
-    vecSubtract(3, p, c, pMinusC);
-    dPMinusC = vecDot(3, d, pMinusC);
-    dD = vecDot(3, d, d);
-    rSq = r * r;
-    disc = dPMinusC * dPMinusC - dD * (vecDot(3, pMinusC, pMinusC) - rSq);
-    if (disc <= 0) {
-        inter->t = rayNONE;
-        return;
-    }
-    disc = sqrt(disc);
-    t = (-dPMinusC - disc) / dD;
-    if (rayEPSILON <= t && t <= bound) {
-        inter->t = t;
-        return;
-    }
-    t = (-dPMinusC + disc) / dD;
-    if (rayEPSILON <= t && t <= bound) {
-        inter->t = t;
-        return;
-    }
-    inter->t = rayNONE;
-}
+
 
 
 
@@ -72,10 +42,15 @@ double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 
 /* Four spheres. */
 #define BODYNUM 4
-isoIsometry isoms[BODYNUM];
-double radii[BODYNUM] = {1.0, 0.5, 0.5, 0.5};
+// isoIsometry isoms[BODYNUM];
+// double radii[BODYNUM] = {1.0, 0.5, 0.5, 0.5};
+bodyBody body1;
+bodyBody body2;
+bodyBody body3;
+bodyBody body4;
+bodyBody *bodyArray[BODYNUM] = {&body1, &body2, &body3, &body4};
 double cAmbient[3] = {1.0/4.0, 1.0/4.0, 1.0/4.0};
-// double cAmbient[3] = {.5, .5, .5};
+
 
 texTexture texture;
 const texTexture *textures[1] = {&texture};
@@ -103,19 +78,54 @@ int initializeArtwork(void) {
     camLookAt(&camera, cameraTarget, cameraRho, cameraPhi, cameraTheta);
     double rot[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
     for (int k = 0; k < BODYNUM; k += 1)
-        isoSetRotation(&(isoms[k]), rot);
-    double transl[3] = {0.0, 0.0, 0.0};
-    isoSetTranslation(&(isoms[0]), transl);
-    vec3Set(1.0, 0.0, 0.0, transl);
-    isoSetTranslation(&(isoms[1]), transl);
-    vec3Set(0.0, 1.0, 0.0, transl);
-    isoSetTranslation(&(isoms[2]), transl);
-    vec3Set(0.0, 0.0, 1.0, transl);
-    isoSetTranslation(&(isoms[3]), transl);
+        isoSetRotation(&(bodyArray[k]->isometry), rot);
+
+    // double transl[3] = {0.0, 0.0, 0.0};
+    // isoSetTranslation(&(isoms[0]), transl);
+    // vec3Set(1.0, 0.0, 0.0, transl);
+    // isoSetTranslation(&(isoms[1]), transl);
+    // vec3Set(0.0, 1.0, 0.0, transl);
+    // isoSetTranslation(&(isoms[2]), transl);
+    // vec3Set(0.0, 0.0, 1.0, transl);
+    // isoSetTranslation(&(isoms[3]), transl);
     if ( texInitializeFile(&texture, "borealis.jpeg") != 0) {
         pixFinalize();
         return 1;
     }
+    bodyInitialize(&bodyArray[0], 1, 0, 1, bodyArray[0]->getIntersection, 
+    bodyArray[0]->getTexCoordsAndNormal, bodyArray[0]->getMaterial);
+    vec3Set(1.0, 0.0, 0.0, bodyArray[0]->isometry.translation);
+    bodyArray[0]->textures = tex[0];
+    //set radious from radii
+    double data[1] = {1.0};
+    bodySetGeometryUniforms(bodyArray[0], 0, data, 1);
+
+    bodyInitialize(&bodyArray[1], 1, 0, 1, bodyArray[1]->getIntersection, 
+    bodyArray[1]->getTexCoordsAndNormal, bodyArray[1]->getMaterial);
+    vec3Set(0.0, 1.0, 0.0, bodyArray[1]->isometry.translation);
+    bodyArray[1]->textures = tex[1];
+    //set radious from radii
+    double data[1] = {0.5};
+    bodySetGeometryUniforms(bodyArray[1], 0, data, 1);
+
+    bodyInitialize(&bodyArray[2], 1, 0, 1, bodyArray[2]->getIntersection, 
+    bodyArray[2]->getTexCoordsAndNormal, bodyArray[2]->getMaterial);
+    vec3Set(0.0, 0.0, 1.0, bodyArray[2]->isometry.translation);
+    bodyArray[1]->textures = tex[2];
+    //set radious from radii
+    double data[1] = {0.5};
+    bodySetGeometryUniforms(bodyArray[2], 0, data, 1);
+
+    bodyInitialize(&bodyArray[3], 1, 0, 1, bodyArray[3]->getIntersection, 
+    bodyArray[2]->getTexCoordsAndNormal, bodyArray[3]->getMaterial);
+    vec3Set(1.0, 0.0, 1.0, bodyArray[3]->isometry.translation);
+    bodyArray[3]->textures = tex[3];
+    //set radious from radii
+    double data[1] = {0.5};
+    bodySetGeometryUniforms(bodyArray[3], 0, data, 1);
+
+
+    
 
 
     return 0;
@@ -126,38 +136,7 @@ void finalizeArtwork(void) {
 }
 
 /*** RENDERING ****************************************************************/
-/* Given the sphere that just produced the given rayIntersection. Outputs the 
-sphere's texture coordinates at the intersection point. Also outputs the 
-sphere's unit outward-pointing normal vector there, in world coordinates. */
-void getTexCoordsAndNormal(
-        double r, const isoIsometry *isom, const double p[3], const double d[3], 
-        const rayIntersection* inter, double texCoords[2], double normal[3]){
-            double locX[3];
-            double x[3];
-            double tTimesd[3];
-            double c[2];
-            double xMinusc[3];
 
-            vecCopy(3, isom->translation, c);
-            vecScale(3, inter->t, d, tTimesd);
-            vecAdd(3, p, tTimesd, x);
-            
-            
-            double rho;
-            double phi;
-            double theta;
-
-            isoUntransformPoint(isom, x, locX);
-            vec3Rectangular(locX, &rho, &phi, &theta);
-
-            texCoords[0] = theta/(2*M_PI);
-            texCoords[1] = 1 - (phi/M_PI);
-
-            vecSubtract(3,x,c,xMinusc);
-            vecUnit(3, xMinusc, normal);
-
-
-    }
 
 /*** RENDERING ****************************************************************/
 
@@ -170,7 +149,7 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
     for (int i = 0; i < BODYNUM; i++)
     {
         rayIntersection inter;
-        getIntersection(radii[i], &(isoms[i]), p, d, bound, &inter);
+        getIntersection(radii[i], &(bodyArray[i]->isometry), p, d, bound, &inter);
         if (inter.t != rayNONE)
         {
             bound = inter.t;
@@ -187,7 +166,7 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
         double normal[3];
         double sampleTex[tex[0]->texelDim];
         double unif[0];
-        getTexCoordsAndNormal(radii[bestI], &(isoms[bestI]), p, d, &bestInter, texCoor, normal);
+        getTexCoordsAndNormal(radii[bestI], &(bodyArray[bestI]->isometry), p, d, &bestInter, texCoor, normal);
         getMaterial(0, unif, 1, tex, &bestInter, texCoor, &material);
 
         texSample(tex[0], texCoor[0], texCoor[1], sampleTex);
@@ -296,7 +275,7 @@ void handleTimeStep(double oldTime, double newTime) {
     double rotMatrix[3][3];
     mat33AngleAxisRotation(newTime, rotAxis, rotMatrix);
     for (int k = 0; k < BODYNUM; k += 1)
-        isoSetRotation(&(isoms[k]), rotMatrix);
+        isoSetRotation(&(bodyArray[k]->isometry), rotMatrix);
     render();
 }
 
