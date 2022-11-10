@@ -53,7 +53,10 @@ double cAmbient[3] = {1.0/4.0, 1.0/4.0, 1.0/4.0};
 
 
 texTexture texture;
-const texTexture *textures[1] = {&texture};
+texTexture texture2;
+texTexture texture3;
+texTexture texture4;
+const texTexture *textures[4] = {&texture, &texture2, &texture3, &texture4};
 const texTexture **tex = textures;
 
 rayMaterial material;
@@ -89,6 +92,18 @@ int initializeArtwork(void) {
     // vec3Set(0.0, 0.0, 1.0, transl);
     // isoSetTranslation(&(isoms[3]), transl);
     if ( texInitializeFile(&texture, "borealis.jpeg") != 0) {
+        pixFinalize();
+        return 1;
+    }
+    if ( texInitializeFile(&texture2, "awesome.png") != 0) {
+        pixFinalize();
+        return 1;
+    }
+    if ( texInitializeFile(&texture3, "download.jpeg") != 0) {
+        pixFinalize();
+        return 1;
+    }
+    if ( texInitializeFile(&texture4, "download2.jpeg") != 0) {
         pixFinalize();
         return 1;
     }
@@ -132,6 +147,10 @@ int initializeArtwork(void) {
 }
 
 void finalizeArtwork(void) {
+    bodyFinalize(&body1);
+    bodyFinalize(&body3);
+    bodyFinalize(&body2);
+    bodyFinalize(&body4);
     return;
 }
 
@@ -142,14 +161,16 @@ void finalizeArtwork(void) {
 
 /* Given a ray x(t) = p + t d. Finds the color where that ray hits the scene (or 
 the background) and loads the color into the rgb parameter. */
-void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
+void getSceneColor(
+        int bodyNum, const bodyBody bodies[], const double p[3], 
+        const double d[3], double rgb[3]){
     double bound = rayINFINITY;
     rayIntersection bestInter;
     int bestI = -1;
     for (int i = 0; i < BODYNUM; i++)
     {
         rayIntersection inter;
-        getIntersection(radii[i], &(bodyArray[i]->isometry), p, d, bound, &inter);
+        bodyGetIntersection(&bodies[i], p, d, bound, &inter);
         if (inter.t != rayNONE)
         {
             bound = inter.t;
@@ -166,8 +187,8 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
         double normal[3];
         double sampleTex[tex[0]->texelDim];
         double unif[0];
-        getTexCoordsAndNormal(radii[bestI], &(bodyArray[bestI]->isometry), p, d, &bestInter, texCoor, normal);
-        getMaterial(0, unif, 1, tex, &bestInter, texCoor, &material);
+        bodyGetTexCoordsAndNormal(&bodies[bestI], p, d, &bestInter, texCoor, normal);
+        bodyGetMaterial(&bodies[bestI], &bestInter, texCoor, &material);
 
         texSample(tex[0], texCoor[0], texCoor[1], sampleTex);
         vecCopy(3, sampleTex, material.cDiffuse);
@@ -229,7 +250,7 @@ void render(void) {
             }
             /* Set the pixel to the color of that ray. */
             double rgb[3];
-            getSceneColor(p, d, rgb);
+            getSceneColor(BODYNUM, bodyArray, p, d, rgb);
             pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
             
             
@@ -291,6 +312,9 @@ int main(void) {
     pixSetTimeStepHandler(handleTimeStep);
     pixRun();
     texFinalize(&texture);
+    texFinalize(&texture2);
+    texFinalize(&texture3);
+    texFinalize(&texture4);
     finalizeArtwork();
     pixFinalize();
     return 0;
