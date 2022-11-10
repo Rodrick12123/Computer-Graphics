@@ -94,6 +94,9 @@ void getMaterial(
             material->hasTransmission = 0;
             material->hasMirror = 0;
             material->hasAmbient = 1;
+            double sampleTex[3];
+            texSample(tex[0], texCoords[0], texCoords[1], sampleTex);
+            vecCopy(3, sampleTex, material->cDiffuse);
         }
 
 int initializeArtwork(void) {
@@ -190,8 +193,7 @@ void getSceneColor(const double p[3], const double d[3], double rgb[3]) {
         getTexCoordsAndNormal(radii[bestI], &(isoms[bestI]), p, d, &bestInter, texCoor, normal);
         getMaterial(0, unif, 1, tex, &bestInter, texCoor, &material);
 
-        texSample(tex[0], texCoor[0], texCoor[1], sampleTex);
-        vecCopy(3, sampleTex, material.cDiffuse);
+        
         vecModulate(3, cAmbient, material.cDiffuse,  rgb);
     }
     
@@ -301,7 +303,7 @@ void handleTimeStep(double oldTime, double newTime) {
 }
 
 int main(void) {
-    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "640mainSpheres") != 0)
+    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "660mainMaterial") != 0)
         return 1;
     if (initializeArtwork() != 0) {
         pixFinalize();

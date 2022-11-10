@@ -2,7 +2,7 @@
 //Jeremiah  Vic
 
 /* On macOS, compile with...
-    clang 660mainMaterial.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 670mainBody.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -72,6 +72,9 @@ void getMaterial(
             material->hasTransmission = 0;
             material->hasMirror = 0;
             material->hasAmbient = 1;
+            double sampleTex[3];
+            texSample(tex[0], texCoords[0], texCoords[1], sampleTex);
+            vecCopy(3, sampleTex, material->cDiffuse);
         }
 
 int initializeArtwork(void) {
@@ -107,37 +110,42 @@ int initializeArtwork(void) {
         pixFinalize();
         return 1;
     }
-    bodyInitialize(&bodyArray[0], 1, 0, 1, bodyArray[0]->getIntersection, 
-    bodyArray[0]->getTexCoordsAndNormal, bodyArray[0]->getMaterial);
+    
+    bodyInitialize(bodyArray[0], 1, 0, 1, sphGetIntersection, 
+    sphGetTexCoordsAndNormal, getMaterial);
     vec3Set(1.0, 0.0, 0.0, bodyArray[0]->isometry.translation);
-    bodyArray[0]->textures = tex[0];
+    bodySetTexture(bodyArray[0], 0, &texture);
+    // bodyArray[0]->textures = tex[0];
     //set radious from radii
     double data[1] = {1.0};
     bodySetGeometryUniforms(bodyArray[0], 0, data, 1);
 
-    bodyInitialize(&bodyArray[1], 1, 0, 1, bodyArray[1]->getIntersection, 
-    bodyArray[1]->getTexCoordsAndNormal, bodyArray[1]->getMaterial);
+    bodyInitialize(bodyArray[1], 1, 0, 1, sphGetIntersection, 
+    sphGetTexCoordsAndNormal, getMaterial);
     vec3Set(0.0, 1.0, 0.0, bodyArray[1]->isometry.translation);
-    bodyArray[1]->textures = tex[1];
+    bodySetTexture(bodyArray[1], 0, &texture2);
+    // bodyArray[1]->textures = tex[1];
     //set radious from radii
-    double data[1] = {0.5};
-    bodySetGeometryUniforms(bodyArray[1], 0, data, 1);
+    double data2[1] = {0.5};
+    bodySetGeometryUniforms(bodyArray[1], 0, data2, 1);
 
-    bodyInitialize(&bodyArray[2], 1, 0, 1, bodyArray[2]->getIntersection, 
-    bodyArray[2]->getTexCoordsAndNormal, bodyArray[2]->getMaterial);
+    bodyInitialize(bodyArray[2], 1, 0, 1, sphGetIntersection, 
+    sphGetTexCoordsAndNormal, getMaterial);
     vec3Set(0.0, 0.0, 1.0, bodyArray[2]->isometry.translation);
-    bodyArray[1]->textures = tex[2];
+    bodySetTexture(bodyArray[2], 0, &texture3);
+    // bodyArray[1]->textures = tex[2];
     //set radious from radii
-    double data[1] = {0.5};
-    bodySetGeometryUniforms(bodyArray[2], 0, data, 1);
+    double data3[1] = {0.5};
+    bodySetGeometryUniforms(bodyArray[2], 0, data3, 1);
 
-    bodyInitialize(&bodyArray[3], 1, 0, 1, bodyArray[3]->getIntersection, 
-    bodyArray[2]->getTexCoordsAndNormal, bodyArray[3]->getMaterial);
+    bodyInitialize(bodyArray[3], 1, 0, 1, sphGetIntersection, 
+    sphGetTexCoordsAndNormal, getMaterial);
     vec3Set(1.0, 0.0, 1.0, bodyArray[3]->isometry.translation);
-    bodyArray[3]->textures = tex[3];
+    bodySetTexture(bodyArray[3], 0, &texture4);
+    // bodyArray[3]->textures = tex[3];
     //set radious from radii
-    double data[1] = {0.5};
-    bodySetGeometryUniforms(bodyArray[3], 0, data, 1);
+    double data4[1] = {0.5};
+    bodySetGeometryUniforms(bodyArray[3], 0, data4, 1);
 
 
     
@@ -190,8 +198,7 @@ void getSceneColor(
         bodyGetTexCoordsAndNormal(&bodies[bestI], p, d, &bestInter, texCoor, normal);
         bodyGetMaterial(&bodies[bestI], &bestInter, texCoor, &material);
 
-        texSample(tex[0], texCoor[0], texCoor[1], sampleTex);
-        vecCopy(3, sampleTex, material.cDiffuse);
+        
         vecModulate(3, cAmbient, material.cDiffuse,  rgb);
     }
     
@@ -301,7 +308,7 @@ void handleTimeStep(double oldTime, double newTime) {
 }
 
 int main(void) {
-    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "640mainSpheres") != 0)
+    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "670mainBody") != 0)
         return 1;
     if (initializeArtwork() != 0) {
         pixFinalize();

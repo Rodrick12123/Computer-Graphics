@@ -294,7 +294,7 @@ void handleTimeStep(double oldTime, double newTime) {
 }
 
 int main(void) {
-    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "640mainSpheres") != 0)
+    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "650mainTexturing") != 0)
         return 1;
     if (initializeArtwork() != 0) {
         pixFinalize();
