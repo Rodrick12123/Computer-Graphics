@@ -69,7 +69,7 @@ void getMaterial(
             material->hasTransmission = 0;
             material->hasMirror = 0;
             material->hasAmbient = 1;
-            double sampleTex[3];
+            double sampleTex[tex[0]->texelDim];
             texSample(tex[0], texCoords[0], texCoords[1], sampleTex);
             vecCopy(3, sampleTex, material->cDiffuse);
         }
@@ -191,7 +191,7 @@ void getSceneColor(
     }
     if (bestI == -1)
     {
-        vec3Set(1.0,1.0,1.0,rgb);
+        vec3Set(0,0,0,rgb);
     }else
     {
         double texCoor[2];
