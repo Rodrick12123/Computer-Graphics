@@ -42,8 +42,6 @@ double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 /* Four spheres. */
 #define BODYNUM 4
 #define LIGHTNUM 0
-// isoIsometry isoms[BODYNUM];
-// double radii[BODYNUM] = {1.0, 0.5, 0.5, 0.5};
 
 bodyBody bodyArray[BODYNUM]; 
 double cAmbient[3] = {1.0/4.0, 1.0/4.0, 1.0/4.0};
@@ -57,6 +55,7 @@ const texTexture *textures[4] = {&texture, &texture2, &texture3, &texture4};
 const texTexture **tex = textures;
 
 
+
 lightLight lights[LIGHTNUM]; 
 /* Based on the uniforms, textures, rayIntersection, and texture coordinates, 
 outputs a material. */
@@ -64,16 +63,26 @@ void getMaterial(
         int unifDim, const double unif[], int texNum, const texTexture *tex[], 
         const rayIntersection *inter, const double texCoords[2], 
         rayMaterial *material){
-            material->hasDiffuse = 0;
-            material->hasSpecular = 0;
+            material->hasDiffuse = 1;
+            material->hasSpecular = 1;
             material->hasTransmission = 0;
             material->hasMirror = 0;
             material->hasAmbient = 1;
             double sampleTex[tex[0]->texelDim];
             texSample(tex[0], texCoords[0], texCoords[1], sampleTex);
             vecCopy(3, sampleTex, material->cDiffuse);
+            //setting specular reflection
+            vecCopy(3, unif, material->cSpecular);
+            vecCopy(1, &unif[3], &material->shininess);
         }
-
+void getDirectionalLighting(int unifDim, const double unif[], double distance, lightLighting lighting){
+    distance = rayINFINITY;
+    //calculating uLight
+    double d[3] = {0.0,0.0,1.0};
+    isoRotateDirection(&lights[0].isometry, d, lighting.uLight);
+    //calculating cLight
+    vecCopy(3, unif, lighting.cLight);
+}
 int initializeArtwork(void) {
     camSetProjectionType(&camera, camPERSPECTIVE);
     camSetFrustum(
@@ -83,14 +92,6 @@ int initializeArtwork(void) {
     for (int k = 0; k < BODYNUM; k += 1)
         isoSetRotation(&(bodyArray[k].isometry), rot);
 
-    // double transl[3] = {0.0, 0.0, 0.0};
-    // isoSetTranslation(&(isoms[0]), transl);
-    // vec3Set(1.0, 0.0, 0.0, transl);
-    // isoSetTranslation(&(isoms[1]), transl);
-    // vec3Set(0.0, 1.0, 0.0, transl);
-    // isoSetTranslation(&(isoms[2]), transl);
-    // vec3Set(0.0, 0.0, 1.0, transl);
-    // isoSetTranslation(&(isoms[3]), transl);
     if ( texInitializeFile(&texture, "borealis.jpeg") != 0) {
         pixFinalize();
         return 1;
@@ -107,42 +108,44 @@ int initializeArtwork(void) {
         pixFinalize();
         return 1;
     }
-    
-    bodyInitialize(&bodyArray[0], sphUNIFDIM, 0, 1, sphGetIntersection, 
+    //material uniforms
+    double matUnif[3] = {1.0,1.0,1.0,64.0};
+
+    bodyInitialize(&bodyArray[0], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
     
     bodySetTexture(&bodyArray[0], 0, &texture);
-    // bodyArray[0]->textures = tex[0];
     //set radious from radii
     double data[1] = {1.0};
     bodySetGeometryUniforms(&bodyArray[0], 0, data, 1);
+    bodySetMaterialUniforms(&bodyArray[0], 0, matUnif, 4);
 
-    bodyInitialize(&bodyArray[1], sphUNIFDIM, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[1], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
 
     bodySetTexture(&bodyArray[1], 0, &texture2);
-    // bodyArray[1]->textures = tex[1];
     //set radious from radii
     double data2[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[1], 0, data2, 1);
+    bodySetMaterialUniforms(&bodyArray[1], 0, matUnif, 4);
 
-    bodyInitialize(&bodyArray[2], sphUNIFDIM, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[2], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
 
     bodySetTexture(&bodyArray[2], 0, &texture3);
-    // bodyArray[1]->textures = tex[2];
     //set radious from radii
     double data3[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[2], 0, data3, 1);
+    bodySetMaterialUniforms(&bodyArray[2], 0, matUnif, 4);
 
-    bodyInitialize(&bodyArray[3], sphUNIFDIM, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[3], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
 
     bodySetTexture(&bodyArray[3], 0, &texture4);
-    // bodyArray[3]->textures = tex[3];
     //set radious from radii
     double data4[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[3], 0, data4, 1);
+    bodySetMaterialUniforms(&bodyArray[3], 0, matUnif, 4);
 
 
     double transl[3] = {0.0, 0.0, 0.0};
@@ -153,6 +156,14 @@ int initializeArtwork(void) {
     isoSetTranslation(&bodyArray[2].isometry, transl);
     vec3Set(0.0, 0.0, 1.0, transl);
     isoSetTranslation(&bodyArray[3].isometry, transl);
+
+    //initalizing lights
+    int LightunifDim = 3;
+    lightInitialize(&lights[0], LightunifDim, lights[0].getLighting);
+    double lightUnif[3] = {};
+    lightSetUniforms(&lights[0], 0, lightUnif, 3);
+    getDirectionalLighting();
+    isoSetRotation(&lights[0].isometry, lights[0].isometry.rotation);
 
     return 0;
 }
@@ -166,6 +177,7 @@ void finalizeArtwork(void) {
     texFinalize(&texture2);
     texFinalize(&texture3);
     texFinalize(&texture4);
+    lightFinalize(&lights[0]);
     return;
 }
 
@@ -183,6 +195,7 @@ void getSceneColor(
     rayMaterial material;
     double bound = rayINFINITY;
     rayIntersection bestInter;
+    lightLighting lighting;
     int bestI = -1;
     for (int i = 0; i < BODYNUM; i++)
     {
@@ -197,7 +210,7 @@ void getSceneColor(
     }
     if (bestI == -1)
     {
-        vec3Set(0,0,0,rgb);
+        vec3Set(1.0,1.0,1.0,rgb);
     }else
     {
         double texCoor[2];
@@ -206,48 +219,75 @@ void getSceneColor(
         double unif[0];
         bodyGetTexCoordsAndNormal(&bodies[bestI], p, d, &bestInter, texCoor, normal);
         bodyGetMaterial(&bodies[bestI], &bestInter, texCoor, &material);
+        //if body has ambient start rgb with ambient term otherwise set body to black
+        if (material.hasAmbient == 1){
+             vecModulate(3, cAmbient, material.cDiffuse,  rgb);
+        }
+        else{
+            vec3Set(0.0,0.0,0.0,rgb);
+        }
         if (material.hasDiffuse == 1 || material.hasSpecular == 1)
         {
+            //compute x
+            double tTimesd[3];
+            double x[3];
+            vecScale(3, bestInter.t, d, tTimesd);
+            vecAdd(3, p, tTimesd, x);
 
+            //loop through all the lights
             for (int i = 0; i < LIGHTNUM; i++)
             {
-                
-                if (material.hasSpecular == 1)
+                //ask each light for its lighting
+                lightGetLighting(&lights[i], x, &lighting);
+
+                //Compute diffuse intensity for specular or diffuse
+                double iDiff = vecDot(3,normal,lighting.uLight);
+
+                //if it has specular compute specular and add it onto rgb
+                if (material.hasSpecular == 1 && iDiff > 0)
                 {
                     double unit[1];
-                    double ucamera = vecUnit(3, d, unit);
+                    double ucamera[3];
+                    //vecScale d by -1 to get -d
+                    double negativeD[3];
+                    vecScale(3, -1, d, negativeD);
+                    vecUnit(3, negativeD, ucamera);
+
                     double modnormlight[3];
-                    double uref[3];
-                    vecModulate(3, normal, lights[i].getLighting, modnormlight);
+                    double urefl[3];
                     double subUlight[3];
-                    //how should i grab ulight?
-                    vecSubtract(3, normal, ulight, subUlight);
+
+                    vecModulate(3, normal, lighting.uLight, modnormlight);
+                    vecSubtract(3, normal, lighting.uLight, subUlight);
                     vecScale(3, 2, modnormlight, modnormlight);
-                    vecModulate(3, modnormlight, subUlight, uref);
-                    //should i dot ucamera or unit?
-                    double ispec = vecDot(3, uref, unit);
+                    vecModulate(3, modnormlight, subUlight, urefl);
+
+                    double ispec = vecDot(3, urefl, ucamera);
                     ispec = pow(ispec, material.shininess);
-                    vecModulate(3, material.cSpecular, material.cDiffuse,  material.cDiffuse);
-                    vecScale(3, ispec, material.cDiffuse,  material.cDiffuse);
+
+                    //if ispec is less than 0 set it to 0 else if i diff is less <= 0 set i spec to 0
+                    if (ispec < 0){
+                        ispec = 0;
+                    }
+                    else if(iDiff <= 0){
+                        ispec = 0;
+                    }
+                    
+                    double ispecTimescLight[3];
+                    vecScale(3, ispec, lighting.cLight, ispecTimescLight);
+                    vec3Set(1.0,1.0,1.0, material.cSpecular);
+                    vecModulate(3, ispecTimescLight, material.cSpecular, rgb);
                 }
-                if (material.hasDiffuse == 1 && material.hasAmbient == 1)
+                //if it has diffuse compute and it onto rgb
+                if (material.hasDiffuse == 1)
                 {
-                    
-                    vecModulate(3, cAmbient, material.cDiffuse,  rgb);
-                    
-                    
-                    
-                }else
-                {
-                    vecCopy(3, material.cDiffuse, rgb);
+                    double iDiffTimescLight[3];
+                    vecScale(3, iDiff, lighting.cLight, iDiffTimescLight);
+                    vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb);
                 }
                 
                 
             }
-            
-        }else
-        {
-            vecModulate(3, cAmbient, material.cDiffuse,  rgb);
         }
     }
     
