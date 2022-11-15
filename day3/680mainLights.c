@@ -41,7 +41,7 @@ double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 
 /* Four spheres. */
 #define BODYNUM 4
-#define LIGHTNUM 0
+#define LIGHTNUM 1
 
 bodyBody bodyArray[BODYNUM]; 
 double cAmbient[3] = {1.0/4.0, 1.0/4.0, 1.0/4.0};
@@ -75,14 +75,15 @@ void getMaterial(
             vecCopy(3, unif, material->cSpecular);
             vecCopy(1, &unif[3], &material->shininess);
         }
-void getDirectionalLighting(int unifDim, const double unif[], double distance, lightLighting lighting){
-    distance = rayINFINITY;
+void getDirectionalLighting(
+        int unifDim, const double unif[], const isoIsometry *isometry,  lightLighting *lighting){
+    lighting->distance = rayINFINITY;
     //calculating uLight
     double d[3] = {0.0,0.0,1.0};
-    isoRotateDirection(&lights[0].isometry, d, lighting.uLight);
+    isoRotateDirection(isometry, d, lighting->uLight);
     //calculating cLight
-    vecCopy(3, unif, lighting.cLight);
-}
+    vecCopy(3, unif, lighting->cLight);
+        }
 int initializeArtwork(void) {
     camSetProjectionType(&camera, camPERSPECTIVE);
     camSetFrustum(
@@ -109,7 +110,7 @@ int initializeArtwork(void) {
         return 1;
     }
     //material uniforms
-    double matUnif[3] = {1.0,1.0,1.0,64.0};
+    double matUnif[4] = {1.0,1.0,1.0,64.0};
 
     bodyInitialize(&bodyArray[0], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
@@ -159,10 +160,12 @@ int initializeArtwork(void) {
 
     //initalizing lights
     int LightunifDim = 3;
-    lightInitialize(&lights[0], LightunifDim, lights[0].getLighting);
+    lightInitialize(&lights[0], LightunifDim, getDirectionalLighting);
     double lightUnif[3] = {};
     lightSetUniforms(&lights[0], 0, lightUnif, 3);
-    getDirectionalLighting();
+    //setting the lights isometry rotation
+    double axis[3] = {1/sqrt(2),1/sqrt(2),0};
+    mat33AngleAxisRotation(M_PI/4, axis, lights[0].isometry.rotation);
     isoSetRotation(&lights[0].isometry, lights[0].isometry.rotation);
 
     return 0;
