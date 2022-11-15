@@ -2,7 +2,7 @@
 //Jeremiah  Vic
 
 /* On macOS, compile with...
-    clang 670mainBody.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 680mainLights.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -19,8 +19,7 @@ On Ubuntu, compile with...
 #include "660ray.c"
 #include "670body.c"
 #include "670sphere.c"
-
-
+#include "680light.c"
 #define SCREENWIDTH 512
 #define SCREENHEIGHT 512
 
@@ -42,6 +41,7 @@ double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 
 /* Four spheres. */
 #define BODYNUM 4
+#define LIGHTNUM 0
 // isoIsometry isoms[BODYNUM];
 // double radii[BODYNUM] = {1.0, 0.5, 0.5, 0.5};
 
@@ -56,8 +56,8 @@ texTexture texture4;
 const texTexture *textures[4] = {&texture, &texture2, &texture3, &texture4};
 const texTexture **tex = textures;
 
-rayMaterial material;
 
+lightLight lights[LIGHTNUM]; 
 /* Based on the uniforms, textures, rayIntersection, and texture coordinates, 
 outputs a material. */
 void getMaterial(
@@ -108,7 +108,7 @@ int initializeArtwork(void) {
         return 1;
     }
     
-    bodyInitialize(&bodyArray[0], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[0], sphUNIFDIM, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
     
     bodySetTexture(&bodyArray[0], 0, &texture);
@@ -117,7 +117,7 @@ int initializeArtwork(void) {
     double data[1] = {1.0};
     bodySetGeometryUniforms(&bodyArray[0], 0, data, 1);
 
-    bodyInitialize(&bodyArray[1], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[1], sphUNIFDIM, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
 
     bodySetTexture(&bodyArray[1], 0, &texture2);
@@ -126,7 +126,7 @@ int initializeArtwork(void) {
     double data2[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[1], 0, data2, 1);
 
-    bodyInitialize(&bodyArray[2], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[2], sphUNIFDIM, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
 
     bodySetTexture(&bodyArray[2], 0, &texture3);
@@ -135,7 +135,7 @@ int initializeArtwork(void) {
     double data3[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[2], 0, data3, 1);
 
-    bodyInitialize(&bodyArray[3], 1, 0, 1, sphGetIntersection, 
+    bodyInitialize(&bodyArray[3], sphUNIFDIM, 0, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMaterial);
 
     bodySetTexture(&bodyArray[3], 0, &texture4);
@@ -177,8 +177,10 @@ void finalizeArtwork(void) {
 /* Given a ray x(t) = p + t d. Finds the color where that ray hits the scene (or 
 the background) and loads the color into the rgb parameter. */
 void getSceneColor(
-        int bodyNum, const bodyBody bodies[], const double p[3], 
+        int bodyNum, const bodyBody bodies[], const double cAmbient[3], 
+        int lightNum, const lightLight lights[], const double p[3], 
         const double d[3], double rgb[3]){
+    rayMaterial material;
     double bound = rayINFINITY;
     rayIntersection bestInter;
     int bestI = -1;
@@ -204,9 +206,49 @@ void getSceneColor(
         double unif[0];
         bodyGetTexCoordsAndNormal(&bodies[bestI], p, d, &bestInter, texCoor, normal);
         bodyGetMaterial(&bodies[bestI], &bestInter, texCoor, &material);
+        if (material.hasDiffuse == 1 || material.hasSpecular == 1)
+        {
 
-        
-        vecModulate(3, cAmbient, material.cDiffuse,  rgb);
+            for (int i = 0; i < LIGHTNUM; i++)
+            {
+                
+                if (material.hasSpecular == 1)
+                {
+                    double unit[1];
+                    double ucamera = vecUnit(3, d, unit);
+                    double modnormlight[3];
+                    double uref[3];
+                    vecModulate(3, normal, lights[i].getLighting, modnormlight);
+                    double subUlight[3];
+                    //how should i grab ulight?
+                    vecSubtract(3, normal, ulight, subUlight);
+                    vecScale(3, 2, modnormlight, modnormlight);
+                    vecModulate(3, modnormlight, subUlight, uref);
+                    //should i dot ucamera or unit?
+                    double ispec = vecDot(3, uref, unit);
+                    ispec = pow(ispec, material.shininess);
+                    vecModulate(3, material.cSpecular, material.cDiffuse,  material.cDiffuse);
+                    vecScale(3, ispec, material.cDiffuse,  material.cDiffuse);
+                }
+                if (material.hasDiffuse == 1 && material.hasAmbient == 1)
+                {
+                    
+                    vecModulate(3, cAmbient, material.cDiffuse,  rgb);
+                    
+                    
+                    
+                }else
+                {
+                    vecCopy(3, material.cDiffuse, rgb);
+                }
+                
+                
+            }
+            
+        }else
+        {
+            vecModulate(3, cAmbient, material.cDiffuse,  rgb);
+        }
     }
     
 
@@ -264,7 +306,7 @@ void render(void) {
             }
             /* Set the pixel to the color of that ray. */
             double rgb[3];
-            getSceneColor(BODYNUM, bodyArray, p, d, rgb);
+            getSceneColor(BODYNUM, bodyArray, cAmbient, 0, lights, p, d, rgb);
             pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
             
             
@@ -325,6 +367,7 @@ int main(void) {
     pixSetKeyRepeatHandler(handleKey);
     pixSetTimeStepHandler(handleTimeStep);
     pixRun();
+    
     finalizeArtwork();
     pixFinalize();
     return 0;
