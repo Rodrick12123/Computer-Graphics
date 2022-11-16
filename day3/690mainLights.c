@@ -41,7 +41,7 @@ double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 
 /* Four spheres. */
 #define BODYNUM 4
-#define LIGHTNUM 1
+#define LIGHTNUM 2
 
 bodyBody bodyArray[BODYNUM]; 
 double cAmbient[3] = {1.0/4.0, 1.0/4.0, 1.0/4.0};
@@ -77,11 +77,28 @@ void getMaterial(
         }
 
 void getDirectionalLighting(
-        int unifDim, const double unif[], const isoIsometry *isometry, const double *x,  lightLighting *lighting){
+        int unifDim, const double unif[], const isoIsometry *isometry, const double *x[3],  lightLighting *lighting){
         lighting->distance = rayINFINITY;
         //calculating uLight
         double d[3] = {0.0,0.0,1.0};
         isoRotateDirection(isometry, d, lighting->uLight);
+        //calculating cLight
+        vecCopy(3, unif, lighting->cLight);
+    }
+
+void getPositionalLighting(
+        int unifDim, const double unif[], const isoIsometry *isometry, const double *x[3],  lightLighting *lighting){
+        double subx[3];
+        double plight[3];
+        vecCopy(3, isometry->translation, plight);
+        vecSubtract(3, x, plight, subx);
+        //calc d
+        vecLength(3,subx);
+        lighting->distance = subx; //figure this out
+        //calculating uLight
+        double ulight[3];
+        vecUnit(3,subx,ulight);
+        vecCopy(3, ulight, lighting->uLight);
         //calculating cLight
         vecCopy(3, unif, lighting->cLight);
     }
@@ -170,6 +187,14 @@ int initializeArtwork(void) {
     mat33AngleAxisRotation(M_PI/4, axis, lights[0].isometry.rotation);
     isoSetRotation(&lights[0].isometry, lights[0].isometry.rotation);
 
+    int LightunifDim2 = 3;
+    lightInitialize(&lights[1], LightunifDim2, getPositionalLighting);
+    double lightUnif2[3] = {1,0,1};
+    lightSetUniforms(&lights[0], 0, lightUnif2, 3);
+    //setting the lights isometry rotation
+    double axis2[3] = {1/sqrt(2),1/sqrt(2),0};
+    mat33AngleAxisRotation(M_PI/4, axis2, lights[1].isometry.rotation);
+    isoSetRotation(&lights[1].isometry, lights[1].isometry.rotation);
     return 0;
 }
 
