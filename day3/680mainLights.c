@@ -247,7 +247,10 @@ void getSceneColor(
 
                 //Compute diffuse intensity for specular or diffuse
                 double iDiff = vecDot(3,normal,lighting.uLight);
-
+                if (iDiff <= 0)
+                {
+                    iDiff = 0;
+                }
                 //if it has specular compute specular and add it onto rgb
                 if (material.hasSpecular == 1 && iDiff > 0)
                 {
@@ -258,14 +261,14 @@ void getSceneColor(
                     vecScale(3, -1, d, negativeD);
                     vecUnit(3, negativeD, ucamera);
 
-                    double modnormlight[3];
+                    double dotnormlight;
                     double urefl[3];
                     double subUlight[3];
 
-                    vecModulate(3, normal, lighting.uLight, modnormlight);
+                    dotnormlight = vecDot(3, normal, lighting.uLight);
                     vecSubtract(3, normal, lighting.uLight, subUlight);
-                    vecScale(3, 2, modnormlight, modnormlight);
-                    vecModulate(3, modnormlight, subUlight, urefl);
+                    double modx2 = 2 * dotnormlight;
+                    vecScale(3, modx2, subUlight, urefl);
 
                     double ispec = vecDot(3, urefl, ucamera);
                     ispec = pow(ispec, material.shininess);
@@ -278,17 +281,21 @@ void getSceneColor(
                         ispec = 0;
                     }
                     
+                    double rgb2[3];
                     double ispecTimescLight[3];
                     vecScale(3, ispec, lighting.cLight, ispecTimescLight);
                     vec3Set(1.0,1.0,1.0, material.cSpecular);
-                    vecModulate(3, ispecTimescLight, material.cSpecular, rgb);
+                    vecModulate(3, ispecTimescLight, material.cSpecular, rgb2);
+                    vecAdd(3, rgb, rgb2,  rgb);
                 }
                 //if it has diffuse compute and it onto rgb
                 if (material.hasDiffuse == 1)
                 {
                     double iDiffTimescLight[3];
+                    double rgb2[3];
                     vecScale(3, iDiff, lighting.cLight, iDiffTimescLight);
-                    vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb);
+                    vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb2);
+                    vecAdd(3, rgb, rgb2,  rgb);
                 }
                 
                 

@@ -2,7 +2,7 @@
 //Jeremiah  Vic
 
 /* On macOS, compile with...
-    clang 690mainLights.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 700mainShadows.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -63,7 +63,7 @@ void getMaterial(
         int unifDim, const double unif[], int texNum, const texTexture *tex[], 
         const rayIntersection *inter, const double texCoords[2], 
         rayMaterial *material){
-            material->hasDiffuse = 0;
+            material->hasDiffuse = 1;
             material->hasSpecular = 1;
             material->hasTransmission = 0;
             material->hasMirror = 0;
@@ -101,6 +101,36 @@ void getPositionalLighting(
         //calculating cLight
         vecCopy(3, unif, lighting->cLight);
     }
+
+/* Casts the ray x(t) = p + t d into the scene. Returns 0 if it hits no body or 
+1 if it hits any body. Used to determine whether a fragment is in shadow. */
+int getSceneShadow(
+        int bodyNum, const bodyBody bodies[], const double p[3], 
+        const double d[3]){
+    rayMaterial material;
+    double bound = rayINFINITY;
+    rayIntersection bestInter;
+    lightLighting lighting;
+    int bestI = -1;
+    for (int i = 0; i < bodyNum; i++)
+    {
+        rayIntersection inter;
+        bodyGetIntersection(&bodies[i], p, d, bound, &inter);
+        if (inter.t != rayNONE)
+        {
+            bound = inter.t;
+            bestI = i;
+            bestInter = inter;
+            return 1;
+        }
+    }
+    if (bestI == -1)
+    {
+        return 0;
+    }
+    return 1;
+    
+}
 
 int initializeArtwork(void) {
     camSetProjectionType(&camera, camPERSPECTIVE);
@@ -169,17 +199,17 @@ int initializeArtwork(void) {
 
     double transl[3] = {0.0, 0.0, 0.0};
     isoSetTranslation(&bodyArray[0].isometry, transl);
-    vec3Set(1.0, 0.0, 0.0, transl);
+    vec3Set(1.5, 0.0, 0.0, transl);
     isoSetTranslation(&bodyArray[1].isometry, transl);
-    vec3Set(0.0, 1.0, 0.0, transl);
+    vec3Set(0.0, 1.5, 0.0, transl);
     isoSetTranslation(&bodyArray[2].isometry, transl);
-    vec3Set(0.0, 0.0, 1.0, transl);
+    vec3Set(0.0, 0.0, 1.5, transl);
     isoSetTranslation(&bodyArray[3].isometry, transl);
 
     //initalizing lights
     int LightunifDim = 3;
     lightInitialize(&lights[0], LightunifDim, getDirectionalLighting);
-    double lightUnif[3] = {1.0,1.0,1.0};
+    double lightUnif[3] = {0.0,0.0,0.0};
     lightSetUniforms(&lights[0], 0, lightUnif, 3);
     //setting the lights isometry rotation
     double axis[3] = {1/sqrt(2),1/sqrt(2),0};
@@ -242,7 +272,7 @@ void getSceneColor(
     }
     if (bestI == -1)
     {
-        vec3Set(1.0,1.0,1.0,rgb);
+        vec3Set(0.0,0.0,0.0,rgb);
     }else
     {
         double texCoor[2];
@@ -251,6 +281,7 @@ void getSceneColor(
         double unif[0];
         bodyGetTexCoordsAndNormal(&bodies[bestI], p, d, &bestInter, texCoor, normal);
         bodyGetMaterial(&bodies[bestI], &bestInter, texCoor, &material);
+        
         //if body has ambient start rgb with ambient term otherwise set body to black
         if (material.hasAmbient == 1){
             vecModulate(3, cAmbient, material.cDiffuse,  rgb);
@@ -275,7 +306,13 @@ void getSceneColor(
                 //Compute diffuse intensity for specular or diffuse
                 
                 double iDiff = vecDot(3,normal,lighting.uLight);
-
+                
+                if (getSceneShadow(BODYNUM, bodies, x, lighting.uLight) == 1)
+                {
+                    material.hasDiffuse = 0;
+                    material.hasSpecular = 0;
+                }
+                
                 if (iDiff <= 0)
                 {
                     iDiff = 0;
