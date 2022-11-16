@@ -93,8 +93,7 @@ void getPositionalLighting(
         vecCopy(3, isometry->translation, plight);
         vecSubtract(3, x, plight, subx);
         //calc d
-        vecLength(3,subx);
-        lighting->distance = subx; //figure this out
+        lighting->distance = vecLength(3,subx); //figure this out
         //calculating uLight
         double ulight[3];
         vecUnit(3,subx,ulight);
@@ -180,7 +179,7 @@ int initializeArtwork(void) {
     //initalizing lights
     int LightunifDim = 3;
     lightInitialize(&lights[0], LightunifDim, getDirectionalLighting);
-    double lightUnif[3] = {1,1,1};
+    double lightUnif[3] = {1.0,1.0,1.0};
     lightSetUniforms(&lights[0], 0, lightUnif, 3);
     //setting the lights isometry rotation
     double axis[3] = {1/sqrt(2),1/sqrt(2),0};
@@ -189,7 +188,7 @@ int initializeArtwork(void) {
 
     int LightunifDim2 = 3;
     lightInitialize(&lights[1], LightunifDim2, getPositionalLighting);
-    double lightUnif2[3] = {1,0,1};
+    double lightUnif2[3] = {1.0,0.0,1.0};
     lightSetUniforms(&lights[0], 0, lightUnif2, 3);
     //setting the lights isometry rotation
     double axis2[3] = {1/sqrt(2),1/sqrt(2),0};
@@ -208,6 +207,7 @@ void finalizeArtwork(void) {
     texFinalize(&texture3);
     texFinalize(&texture4);
     lightFinalize(&lights[0]);
+    lightFinalize(&lights[1]);
     return;
 }
 
@@ -276,7 +276,6 @@ void getSceneColor(
                 //if it has specular compute specular and add it onto rgb
                 if (material.hasSpecular == 1 && iDiff > 0)
                 {
-                    double unit[1];
                     double ucamera[3];
                     //vecScale d by -1 to get -d
                     double negativeD[3];
