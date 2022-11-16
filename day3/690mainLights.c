@@ -2,7 +2,7 @@
 //Jeremiah  Vic
 
 /* On macOS, compile with...
-    clang 680mainLights.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 690mainLights.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -63,8 +63,8 @@ void getMaterial(
         int unifDim, const double unif[], int texNum, const texTexture *tex[], 
         const rayIntersection *inter, const double texCoords[2], 
         rayMaterial *material){
-            material->hasDiffuse = 1;
-            material->hasSpecular = 0;
+            material->hasDiffuse = 0;
+            material->hasSpecular = 1;
             material->hasTransmission = 0;
             material->hasMirror = 0;
             material->hasAmbient = 1;
@@ -77,7 +77,7 @@ void getMaterial(
         }
 
 void getDirectionalLighting(
-        int unifDim, const double unif[], const isoIsometry *isometry, const double *x[3],  lightLighting *lighting){
+        int unifDim, const double unif[], const isoIsometry *isometry, const double x[3],  lightLighting *lighting){
         lighting->distance = rayINFINITY;
         //calculating uLight
         double d[3] = {0.0,0.0,1.0};
@@ -87,11 +87,11 @@ void getDirectionalLighting(
     }
 
 void getPositionalLighting(
-        int unifDim, const double unif[], const isoIsometry *isometry, const double *x[3],  lightLighting *lighting){
+        int unifDim, const double unif[], const isoIsometry *isometry, const double x[3],  lightLighting *lighting){
         double subx[3];
         double plight[3];
         vecCopy(3, isometry->translation, plight);
-        vecSubtract(3, x, plight, subx);
+        vecSubtract(3, plight, x, subx);
         //calc d
         lighting->distance = vecLength(3,subx); //figure this out
         //calculating uLight
@@ -183,17 +183,19 @@ int initializeArtwork(void) {
     lightSetUniforms(&lights[0], 0, lightUnif, 3);
     //setting the lights isometry rotation
     double axis[3] = {1/sqrt(2),1/sqrt(2),0};
-    mat33AngleAxisRotation(M_PI/4, axis, lights[0].isometry.rotation);
-    isoSetRotation(&lights[0].isometry, lights[0].isometry.rotation);
+    double rott[3][3];
+    mat33AngleAxisRotation(M_PI/4, axis, rott);
+    isoSetRotation(&lights[0].isometry, rott);
 
     int LightunifDim2 = 3;
     lightInitialize(&lights[1], LightunifDim2, getPositionalLighting);
-    double lightUnif2[3] = {1.0,0.0,1.0};
-    lightSetUniforms(&lights[0], 0, lightUnif2, 3);
+    double lightUnif2[3] = {0.0,0.0,0.0};
+    lightSetUniforms(&lights[1], 0, lightUnif2, 3);
     //setting the lights isometry rotation
-    double axis2[3] = {1/sqrt(2),1/sqrt(2),0};
-    mat33AngleAxisRotation(M_PI/4, axis2, lights[1].isometry.rotation);
-    isoSetRotation(&lights[1].isometry, lights[1].isometry.rotation);
+
+    double trans[3] = {2,2,5};
+    isoSetTranslation(&lights[1].isometry, trans);
+    
     return 0;
 }
 
@@ -251,7 +253,7 @@ void getSceneColor(
         bodyGetMaterial(&bodies[bestI], &bestInter, texCoor, &material);
         //if body has ambient start rgb with ambient term otherwise set body to black
         if (material.hasAmbient == 1){
-             vecModulate(3, cAmbient, material.cDiffuse,  rgb);
+            vecModulate(3, cAmbient, material.cDiffuse,  rgb);
         }
         else{
             vec3Set(0.0,0.0,0.0,rgb);
@@ -271,7 +273,14 @@ void getSceneColor(
                 lightGetLighting(&lights[i], x, &lighting);
 
                 //Compute diffuse intensity for specular or diffuse
+                
                 double iDiff = vecDot(3,normal,lighting.uLight);
+
+                if (iDiff <= 0)
+                {
+                    iDiff = 0;
+                }
+                
 
                 //if it has specular compute specular and add it onto rgb
                 if (material.hasSpecular == 1 && iDiff > 0)
@@ -282,14 +291,15 @@ void getSceneColor(
                     vecScale(3, -1, d, negativeD);
                     vecUnit(3, negativeD, ucamera);
 
-                    double modnormlight[3];
+                    double dotnormlight;
                     double urefl[3];
                     double subUlight[3];
 
-                    vecModulate(3, normal, lighting.uLight, modnormlight);
+                    dotnormlight = vecDot(3, normal, lighting.uLight);
                     vecSubtract(3, normal, lighting.uLight, subUlight);
-                    vecScale(3, 2, modnormlight, modnormlight);
-                    vecModulate(3, modnormlight, subUlight, urefl);
+                    double modx2 = 2 * dotnormlight;
+                    vecScale(3, modx2, subUlight, urefl);
+                    // vecModulate(3, modnormlight, subUlight, urefl);
 
                     double ispec = vecDot(3, urefl, ucamera);
                     ispec = pow(ispec, material.shininess);
@@ -301,18 +311,21 @@ void getSceneColor(
                     else if(iDiff <= 0){
                         ispec = 0;
                     }
-                    
+                    double rgb2[3];
                     double ispecTimescLight[3];
                     vecScale(3, ispec, lighting.cLight, ispecTimescLight);
                     vec3Set(1.0,1.0,1.0, material.cSpecular);
-                    vecModulate(3, ispecTimescLight, material.cSpecular, rgb);
+                    vecModulate(3, ispecTimescLight, material.cSpecular, rgb2);
+                    vecAdd(3, rgb, rgb2,  rgb);
                 }
                 //if it has diffuse compute and it onto rgb
                 if (material.hasDiffuse == 1)
                 {
                     double iDiffTimescLight[3];
+                    double rgb2[3];
                     vecScale(3, iDiff, lighting.cLight, iDiffTimescLight);
-                    vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb);
+                    vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb2);
+                    vecAdd(3, rgb, rgb2,  rgb);
                 }
                 
                 
