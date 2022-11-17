@@ -189,7 +189,7 @@ int initializeArtwork(void) {
 
     int LightunifDim2 = 3;
     lightInitialize(&lights[1], LightunifDim2, getPositionalLighting);
-    double lightUnif2[3] = {1.0,1.0,1.0};
+    double lightUnif2[3] = {1.0,0.0,1.0};
     lightSetUniforms(&lights[1], 0, lightUnif2, 3);
     //setting the lights isometry rotation
 
@@ -293,28 +293,26 @@ void getSceneColor(
 
                     double dotnormlight;
                     double urefl[3];
-                    double subUlight[3];
+                    double scaleN[3];
 
-                    dotnormlight = vecDot(3, normal, lighting.uLight);
-                    vecSubtract(3, normal, lighting.uLight, subUlight);
-                    double modx2 = 2 * dotnormlight;
-                    vecScale(3, modx2, subUlight, urefl);
+                    dotnormlight = 2 * vecDot(3, lighting.uLight, normal);
+                    vecScale(3, dotnormlight, normal, scaleN);
+                    vecSubtract(3, scaleN, lighting.uLight, urefl);
                     // vecModulate(3, modnormlight, subUlight, urefl);
 
                     double ispec = vecDot(3, urefl, ucamera);
-                    ispec = pow(ispec, material.shininess);
+                    
 
                     //if ispec is less than 0 set it to 0 else if i diff is less <= 0 set i spec to 0
                     if (ispec < 0){
                         ispec = 0;
                     }
-                    else if(iDiff <= 0){
-                        ispec = 0;
-                    }
+                    
+                    ispec = pow(ispec, material.shininess);
                     double rgb2[3];
                     double ispecTimescLight[3];
                     vecScale(3, ispec, lighting.cLight, ispecTimescLight);
-                    vec3Set(1.0,1.0,1.0, material.cSpecular);
+                    
                     vecModulate(3, ispecTimescLight, material.cSpecular, rgb2);
                     vecAdd(3, rgb, rgb2,  rgb);
                 }

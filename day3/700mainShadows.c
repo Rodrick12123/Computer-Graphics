@@ -107,28 +107,19 @@ void getPositionalLighting(
 int getSceneShadow(
         int bodyNum, const bodyBody bodies[], const double p[3], 
         const double d[3]){
-    rayMaterial material;
+
     double bound = rayINFINITY;
-    rayIntersection bestInter;
-    lightLighting lighting;
-    int bestI = -1;
     for (int i = 0; i < bodyNum; i++)
     {
         rayIntersection inter;
         bodyGetIntersection(&bodies[i], p, d, bound, &inter);
         if (inter.t != rayNONE)
         {
-            bound = inter.t;
-            bestI = i;
-            bestInter = inter;
+            
             return 1;
         }
     }
-    if (bestI == -1)
-    {
-        return 0;
-    }
-    return 1;
+    return 0;
     
 }
 
@@ -209,7 +200,7 @@ int initializeArtwork(void) {
     //initalizing lights
     int LightunifDim = 3;
     lightInitialize(&lights[0], LightunifDim, getDirectionalLighting);
-    double lightUnif[3] = {0.0,0.0,0.0};
+    double lightUnif[3] = {0.0,1.0,0.0};
     lightSetUniforms(&lights[0], 0, lightUnif, 3);
     //setting the lights isometry rotation
     double axis[3] = {1/sqrt(2),1/sqrt(2),0};
@@ -304,67 +295,62 @@ void getSceneColor(
                 lightGetLighting(&lights[i], x, &lighting);
 
                 //Compute diffuse intensity for specular or diffuse
-                
-                double iDiff = vecDot(3,normal,lighting.uLight);
-                
-                if (getSceneShadow(BODYNUM, bodies, x, lighting.uLight) == 1)
-                {
-                    material.hasDiffuse = 0;
-                    material.hasSpecular = 0;
-                }
-                
-                if (iDiff <= 0)
-                {
-                    iDiff = 0;
-                }
-                
 
                 //if it has specular compute specular and add it onto rgb
-                if (material.hasSpecular == 1 && iDiff > 0)
+                if (getSceneShadow(BODYNUM, bodies, x, lighting.uLight) == 0)
                 {
-                    double ucamera[3];
-                    //vecScale d by -1 to get -d
-                    double negativeD[3];
-                    vecScale(3, -1, d, negativeD);
-                    vecUnit(3, negativeD, ucamera);
-
-                    double dotnormlight;
-                    double urefl[3];
-                    double subUlight[3];
-
-                    dotnormlight = vecDot(3, normal, lighting.uLight);
-                    vecSubtract(3, normal, lighting.uLight, subUlight);
-                    double modx2 = 2 * dotnormlight;
-                    vecScale(3, modx2, subUlight, urefl);
-                    // vecModulate(3, modnormlight, subUlight, urefl);
-
-                    double ispec = vecDot(3, urefl, ucamera);
-                    ispec = pow(ispec, material.shininess);
-
-                    //if ispec is less than 0 set it to 0 else if i diff is less <= 0 set i spec to 0
-                    if (ispec < 0){
-                        ispec = 0;
-                    }
-                    else if(iDiff <= 0){
-                        ispec = 0;
-                    }
-                    double rgb2[3];
-                    double ispecTimescLight[3];
-                    vecScale(3, ispec, lighting.cLight, ispecTimescLight);
-                    vec3Set(1.0,1.0,1.0, material.cSpecular);
-                    vecModulate(3, ispecTimescLight, material.cSpecular, rgb2);
-                    vecAdd(3, rgb, rgb2,  rgb);
-                }
-                //if it has diffuse compute and it onto rgb
-                if (material.hasDiffuse == 1)
-                {
-                    double iDiffTimescLight[3];
-                    double rgb2[3];
-                    vecScale(3, iDiff, lighting.cLight, iDiffTimescLight);
-                    vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb2);
-                    vecAdd(3, rgb, rgb2,  rgb);
-                }
+                    double iDiff = vecDot(3,normal,lighting.uLight);
                 
+                
+                
+                    if (iDiff <= 0)
+                    {
+                        iDiff = 0;
+                    }
+                
+                    if (material.hasSpecular == 1 && iDiff > 0)
+                    {
+                        double ucamera[3];
+                        //vecScale d by -1 to get -d
+                        double negativeD[3];
+                        vecScale(3, -1, d, negativeD);
+                        vecUnit(3, negativeD, ucamera);
+
+                        double dotnormlight;
+                        double urefl[3];
+                        double scaleN[3];
+
+                        dotnormlight = 2 * vecDot(3, lighting.uLight, normal);
+                        vecScale(3, dotnormlight, normal, scaleN);
+                        vecSubtract(3, scaleN, lighting.uLight, urefl);
+                        // vecModulate(3, modnormlight, subUlight, urefl);
+
+                        double ispec = vecDot(3, urefl, ucamera);
+                        
+
+                        //if ispec is less than 0 set it to 0 else if i diff is less <= 0 set i spec to 0
+                        if (ispec < 0){
+                            ispec = 0;
+                        }
+                        
+                        ispec = pow(ispec, material.shininess);
+                        double rgb2[3];
+                        double ispecTimescLight[3];
+                        vecScale(3, ispec, lighting.cLight, ispecTimescLight);
+                        
+                        vecModulate(3, ispecTimescLight, material.cSpecular, rgb2);
+                        vecAdd(3, rgb, rgb2,  rgb);
+                    }
+                    //if it has diffuse compute and it onto rgb
+                    if (material.hasDiffuse == 1)
+                    {
+                        double iDiffTimescLight[3];
+                        double rgb2[3];
+                        vecScale(3, iDiff, lighting.cLight, iDiffTimescLight);
+                        vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb2);
+                        vecAdd(3, rgb, rgb2,  rgb);
+                    }
+                }
                 
             }
         }

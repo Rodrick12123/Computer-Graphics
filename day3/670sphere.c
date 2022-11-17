@@ -44,7 +44,7 @@ void sphGetTexCoordsAndNormal(
      double locX[3];
             double x[3];
             double tTimesd[3];
-            double c[2];
+            double c[3];
             double xMinusc[3];
 
             vecCopy(3, isom->translation, c);
