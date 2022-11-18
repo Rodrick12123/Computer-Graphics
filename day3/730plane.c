@@ -6,7 +6,7 @@
 
 /* An implementation of getIntersection for bodies that are planes. */
 void plaGetIntersection(
-        int unifDim, const double unif[], const isoIsometry *isom, 
+        int unifDim, const double unif[], const void *data, const isoIsometry *isom, 
         const double p[3], const double d[3], double bound, 
         rayIntersection* inter) {
                 double locP[3];
@@ -33,7 +33,7 @@ void plaGetIntersection(
 
 /* An implementation of getTexCoordsAndNormal for bodies that are planes. */
 void plaGetTexCoordsAndNormal(
-        int unifDim, const double unif[], const isoIsometry *isom, 
+        int unifDim, const double unif[], const void *data, const isoIsometry *isom, 
         const double p[3], const double d[3], const rayIntersection *inter, 
         double texCoords[2], double normal[3]) {
 

@@ -2,7 +2,7 @@
 //Jeremiah  Vic
 
 /* On macOS, compile with...
-    clang 710mainMirrors.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 730mainMeshes.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -16,10 +16,14 @@ On Ubuntu, compile with...
 #include "300isometry.c"
 #include "300camera.c"
 #include "150texture.c"
-#include "660ray.c"
-#include "670body.c"
-#include "670sphere.c"
+#include "730ray.c"
+#include "730body.c"
+#include "730sphere.c"
 #include "680light.c"
+#include "730plane.c"
+#include "730mesh.c"
+#include "250mesh3D.c"
+#include "740resh.c"
 #define SCREENWIDTH 512
 #define SCREENHEIGHT 512
 
@@ -40,7 +44,7 @@ double cameraTarget[3] = {0.0, 0.0, 0.0};
 double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 
 /* Four spheres. */
-#define BODYNUM 4
+#define BODYNUM 5
 #define LIGHTNUM 2
 
 bodyBody bodyArray[BODYNUM]; 
@@ -60,7 +64,7 @@ lightLight lights[LIGHTNUM];
 /* Based on the uniforms, textures, rayIntersection, and texture coordinates, 
 outputs a material. */
 void getPhongMaterial(
-        int unifDim, const double unif[], int texNum, const texTexture *tex[], 
+        int unifDim, const double unif[], const void *data, int texNum, const texTexture *tex[], 
         const rayIntersection *inter, const double texCoords[2], 
         rayMaterial *material){
             material->hasDiffuse = 1;
@@ -77,7 +81,7 @@ void getPhongMaterial(
         }
 
 void getMirrorMaterial(
-        int unifDim, const double unif[], int texNum, const texTexture *tex[], 
+        int unifDim, const double unif[], const void *data, int texNum, const texTexture *tex[], 
         const rayIntersection *inter, const double texCoords[2], 
         rayMaterial *material){
 
@@ -195,12 +199,18 @@ int initializeArtwork(void) {
 
     bodyInitialize(&bodyArray[3], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMirrorMaterial);
-    double matUnif2[5] = {1.0,1.0,1.0,64.0, 1};
     bodySetTexture(&bodyArray[3], 0, &texture4);
     //set radious from radii
     double data4[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[3], 0, data4, 1);
-    bodySetMaterialUniforms(&bodyArray[3], 0, matUnif2, 4);
+    bodySetMaterialUniforms(&bodyArray[3], 0, matUnif, 4);
+
+    //5th body
+    bodyInitialize(&bodyArray[4], plaUNIFDIM, 4, 1, plaGetIntersection, 
+    plaGetTexCoordsAndNormal, getPhongMaterial);
+    bodySetTexture(&bodyArray[4], 0, &texture4);
+    bodySetMaterialUniforms(&bodyArray[4], 0, matUnif, 4);
+    
 
 
     double transl[3] = {0.0, 0.0, 0.0};
@@ -211,11 +221,13 @@ int initializeArtwork(void) {
     isoSetTranslation(&bodyArray[2].isometry, transl);
     vec3Set(0.0, 0.0, 1.5, transl);
     isoSetTranslation(&bodyArray[3].isometry, transl);
+    vec3Set(0.0,0,-1, transl);
+    isoSetTranslation(&bodyArray[4].isometry, transl);
 
     //initalizing lights
     int LightunifDim = 3;
     lightInitialize(&lights[0], LightunifDim, getDirectionalLighting);
-    double lightUnif[3] = {0.0,1.0,0.0};
+    double lightUnif[3] = {1.0,1.0,1.0};
     lightSetUniforms(&lights[0], 0, lightUnif, 3);
     //setting the lights isometry rotation
     double axis[3] = {1/sqrt(2),1/sqrt(2),0};
@@ -229,7 +241,7 @@ int initializeArtwork(void) {
     lightSetUniforms(&lights[1], 0, lightUnif2, 3);
     //setting the lights isometry rotation
 
-    double trans[3] = {2,2,5};
+    double trans[3] = {1,1,2};
     isoSetTranslation(&lights[1].isometry, trans);
     
     return 0;
@@ -506,7 +518,7 @@ void handleTimeStep(double oldTime, double newTime) {
     double rotAxis[3] = {1.0 / sqrt(3.0), 1.0 / sqrt(3.0), 1.0 / sqrt(3.0)};
     double rotMatrix[3][3];
     mat33AngleAxisRotation(newTime, rotAxis, rotMatrix);
-    for (int k = 0; k < BODYNUM; k += 1)
+    for (int k = 0; k < BODYNUM - 1; k += 1)
         isoSetRotation(&(bodyArray[k].isometry), rotMatrix);
     render();
 }
