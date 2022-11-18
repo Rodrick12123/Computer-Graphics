@@ -2,7 +2,7 @@
 //Jeremiah  Vic
 
 /* On macOS, compile with...
-    clang 700mainShadows.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 710mainMirrors.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -80,13 +80,12 @@ void getMirrorMaterial(
         int unifDim, const double unif[], int texNum, const texTexture *tex[], 
         const rayIntersection *inter, const double texCoords[2], 
         rayMaterial *material){
-            material->hasMirror = 0;
-            if (unif[4] == 1)
-            {
+            if (unif[4] == 1){
                 material->hasMirror = 1;
                 double cMirror[3] = {1,1,1};
-                vecCopy(1, cMirror, &material->cMirror);
+                vecCopy(3, cMirror, material->cMirror);
             }
+            
 
         }
 
@@ -175,7 +174,7 @@ int initializeArtwork(void) {
     bodySetMaterialUniforms(&bodyArray[0], 0, matUnif, 4);
     //body 1 is mirror material now
     bodyInitialize(&bodyArray[1], sphUNIFDIM, 4, 1, sphGetIntersection, 
-    sphGetTexCoordsAndNormal, getMirrorMaterial);
+    sphGetTexCoordsAndNormal, getPhongMaterial);
 
     bodySetTexture(&bodyArray[1], 0, &texture2);
     //set radious from radii
@@ -184,7 +183,7 @@ int initializeArtwork(void) {
     bodySetMaterialUniforms(&bodyArray[1], 0, matUnif, 4);
     //body 2 is mirror material now
     bodyInitialize(&bodyArray[2], sphUNIFDIM, 4, 1, sphGetIntersection, 
-    sphGetTexCoordsAndNormal, getMirrorMaterial);
+    sphGetTexCoordsAndNormal, getPhongMaterial);
 
     bodySetTexture(&bodyArray[2], 0, &texture3);
     //set radious from radii
@@ -193,7 +192,7 @@ int initializeArtwork(void) {
     bodySetMaterialUniforms(&bodyArray[2], 0, matUnif, 4);
 
     bodyInitialize(&bodyArray[3], sphUNIFDIM, 4, 1, sphGetIntersection, 
-    sphGetTexCoordsAndNormal, getPhongMaterial);
+    sphGetTexCoordsAndNormal, getMirrorMaterial);
     double matUnif2[5] = {1.0,1.0,1.0,64.0, 1};
     bodySetTexture(&bodyArray[3], 0, &texture4);
     //set radious from radii
@@ -264,7 +263,7 @@ void getSceneColor(
     rayIntersection bestInter;
     lightLighting lighting;
     int bestI = -1;
-    recDepth = 3;
+    recDepth = 1;
     for (int i = 0; i < BODYNUM; i++)
     {
         rayIntersection inter;
@@ -365,23 +364,38 @@ void getSceneColor(
                         vecModulate(3, iDiffTimescLight, material.cDiffuse,  rgb2);
                         vecAdd(3, rgb, rgb2,  rgb);
                     }
+                            //if recDepth is 0 turn of mirroring
                 }
-                
+
             }
-        }
-        //if recDepth is 0 turn of mirroring
-        if (recDepth == 0){
-                material.hasMirror == 0;
-        }
-        //checking to see if body has a mirror material
-        if (material.hasMirror == 1 && recDepth > 0){
-            //call getSceneColor to compute cFromMirror
-            double cFromMirror[3];
-            getSceneColor(recDepth - 1, BODYNUM, bodies[], cAmbient, LIGHTNUM, lights[], p, d, cFromMirror);
-            double rgb2[3];
-            //mirror contribution
-            vecModulate(3, material.cMirror, cFromMirror, rgb2);
-            vecAdd(3, rgb, rgb2,  rgb);
+            // if recDepth is 0 turn of mirroring
+                // if (recDepth == 0)
+                // {
+                //     material.hasMirror = 0;
+                // }
+                // checking to see if body has a mirror material
+                if (material.hasMirror == 1 && recDepth > 0)
+                {
+                    
+                    double cFromMirror[3];
+                    //computing new d
+                    double negativeD[3];
+                    double subNegativeD[3];
+                    double newD[3];
+                    vecScale(3, -1, d, negativeD);
+                    double negDTimesNormal = 2 * vecDot(3, negativeD, normal);
+                    vecSubtract(3, normal, negativeD, subNegativeD);
+                    vecScale(3, negDTimesNormal, subNegativeD, newD);
+                    //computing new p
+                    double newP[3];
+                    vecScale(3, bestInter.t, x, newP);
+                    // call getSceneColor to compute cFromMirror
+                    getSceneColor(recDepth - 1, BODYNUM, bodies, cAmbient, LIGHTNUM, lights, newP, newD, cFromMirror);
+                    double rgb2[3];
+                    // mirror contribution
+                    vecModulate(3, material.cMirror, cFromMirror, rgb2);
+                    vecAdd(3, rgb, rgb2, rgb);
+                }
         }
     }
     
@@ -440,7 +454,7 @@ void render(void) {
             }
             /* Set the pixel to the color of that ray. */
             double rgb[3];
-            int recDepth = 3;
+            int recDepth = 1;
             getSceneColor(recDepth, BODYNUM, bodyArray, cAmbient, 0, lights, p, d, rgb);
             pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
             
