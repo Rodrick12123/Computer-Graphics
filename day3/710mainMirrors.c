@@ -173,18 +173,18 @@ int initializeArtwork(void) {
     double data[1] = {1.0};
     bodySetGeometryUniforms(&bodyArray[0], 0, data, 1);
     bodySetMaterialUniforms(&bodyArray[0], 0, matUnif, 4);
-
+    //body 1 is mirror material now
     bodyInitialize(&bodyArray[1], sphUNIFDIM, 4, 1, sphGetIntersection, 
-    sphGetTexCoordsAndNormal, getPhongMaterial);
+    sphGetTexCoordsAndNormal, getMirrorMaterial);
 
     bodySetTexture(&bodyArray[1], 0, &texture2);
     //set radious from radii
     double data2[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[1], 0, data2, 1);
     bodySetMaterialUniforms(&bodyArray[1], 0, matUnif, 4);
-
+    //body 2 is mirror material now
     bodyInitialize(&bodyArray[2], sphUNIFDIM, 4, 1, sphGetIntersection, 
-    sphGetTexCoordsAndNormal, getPhongMaterial);
+    sphGetTexCoordsAndNormal, getMirrorMaterial);
 
     bodySetTexture(&bodyArray[2], 0, &texture3);
     //set radious from radii
@@ -256,7 +256,7 @@ void finalizeArtwork(void) {
 /* Given a ray x(t) = p + t d. Finds the color where that ray hits the scene (or 
 the background) and loads the color into the rgb parameter. */
 void getSceneColor(
-        int bodyNum, const bodyBody bodies[], const double cAmbient[3], 
+        int recDepth, int bodyNum, const bodyBody bodies[], const double cAmbient[3], 
         int lightNum, const lightLight lights[], const double p[3], 
         const double d[3], double rgb[3]){
     rayMaterial material;
@@ -264,6 +264,7 @@ void getSceneColor(
     rayIntersection bestInter;
     lightLighting lighting;
     int bestI = -1;
+    recDepth = 3;
     for (int i = 0; i < BODYNUM; i++)
     {
         rayIntersection inter;
@@ -368,6 +369,20 @@ void getSceneColor(
                 
             }
         }
+        //if recDepth is 0 turn of mirroring
+        if (recDepth == 0){
+                material.hasMirror == 0;
+        }
+        //checking to see if body has a mirror material
+        if (material.hasMirror == 1 && recDepth > 0){
+            //call getSceneColor to compute cFromMirror
+            double cFromMirror[3];
+            getSceneColor(recDepth - 1, BODYNUM, bodies[], cAmbient, LIGHTNUM, lights[], p, d, cFromMirror);
+            double rgb2[3];
+            //mirror contribution
+            vecModulate(3, material.cMirror, cFromMirror, rgb2);
+            vecAdd(3, rgb, rgb2,  rgb);
+        }
     }
     
 
@@ -425,7 +440,8 @@ void render(void) {
             }
             /* Set the pixel to the color of that ray. */
             double rgb[3];
-            getSceneColor(BODYNUM, bodyArray, cAmbient, 0, lights, p, d, rgb);
+            int recDepth = 3;
+            getSceneColor(recDepth, BODYNUM, bodyArray, cAmbient, 0, lights, p, d, rgb);
             pixSetRGB(i, j, rgb[0], rgb[1], rgb[2]);
             
             
