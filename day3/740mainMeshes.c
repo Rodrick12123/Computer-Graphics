@@ -2,7 +2,7 @@
 //Jeremiah  Vic
 
 /* On macOS, compile with...
-    clang 730mainMeshes.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
+    clang 740mainMeshes.c 040pixel.o -lglfw -framework OpenGL -framework Cocoa -framework IOKit
 On Ubuntu, compile with...
     cc 640mainSpheres.c 040pixel.o -lglfw -lGL -lm -ldl
 */
@@ -23,6 +23,7 @@ On Ubuntu, compile with...
 #include "730plane.c"
 #include "730mesh.c"
 #include "250mesh3D.c"
+#include "740resh.c"
 #define SCREENWIDTH 512
 #define SCREENHEIGHT 512
 
@@ -56,6 +57,7 @@ texTexture texture3;
 texTexture texture4;
 const texTexture *textures[4] = {&texture, &texture2, &texture3, &texture4};
 const texTexture **tex = textures;
+meshMesh mesh;
 
 
 
@@ -169,6 +171,7 @@ int initializeArtwork(void) {
     //material uniforms
     double matUnif[4] = {1.0,1.0,1.0,64.0};
 
+    //first body
     bodyInitialize(&bodyArray[0], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getPhongMaterial);
     
@@ -177,7 +180,8 @@ int initializeArtwork(void) {
     double data[1] = {1.0};
     bodySetGeometryUniforms(&bodyArray[0], 0, data, 1);
     bodySetMaterialUniforms(&bodyArray[0], 0, matUnif, 4);
-    //body 1 is mirror material now
+
+    //second body
     bodyInitialize(&bodyArray[1], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getPhongMaterial);
 
@@ -186,7 +190,8 @@ int initializeArtwork(void) {
     double data2[1] = {0.5};
     bodySetGeometryUniforms(&bodyArray[1], 0, data2, 1);
     bodySetMaterialUniforms(&bodyArray[1], 0, matUnif, 4);
-    //body 2 is mirror material now
+
+    //third body
     bodyInitialize(&bodyArray[2], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMirrorMaterial);
 
@@ -196,6 +201,7 @@ int initializeArtwork(void) {
     bodySetGeometryUniforms(&bodyArray[2], 0, data3, 1);
     bodySetMaterialUniforms(&bodyArray[2], 0, matUnif, 4);
 
+    //fourth body
     bodyInitialize(&bodyArray[3], sphUNIFDIM, 4, 1, sphGetIntersection, 
     sphGetTexCoordsAndNormal, getMirrorMaterial);
     bodySetTexture(&bodyArray[3], 0, &texture4);
@@ -209,6 +215,11 @@ int initializeArtwork(void) {
     plaGetTexCoordsAndNormal, getPhongMaterial);
     bodySetTexture(&bodyArray[4], 0, &texture4);
     bodySetMaterialUniforms(&bodyArray[4], 0, matUnif, 4);
+
+    //6th body
+    if(mesh3DInitializeBox(&mesh,-0.5,0.5,-0.5,0.5,-0.5,0.5) != 0){
+        texFinalize(&texture2);
+    }
     
 
 
@@ -222,6 +233,7 @@ int initializeArtwork(void) {
     isoSetTranslation(&bodyArray[3].isometry, transl);
     vec3Set(0.0,0,-1, transl);
     isoSetTranslation(&bodyArray[4].isometry, transl);
+    vec3Set(1.0,0.0,0.0, transl);
 
     //initalizing lights
     int LightunifDim = 3;
@@ -257,6 +269,7 @@ void finalizeArtwork(void) {
     texFinalize(&texture4);
     lightFinalize(&lights[0]);
     lightFinalize(&lights[1]);
+    meshFinalize(&mesh);
     return;
 }
 
@@ -523,7 +536,7 @@ void handleTimeStep(double oldTime, double newTime) {
 }
 
 int main(void) {
-    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "730mainMeshes") != 0)
+    if (pixInitialize(SCREENWIDTH, SCREENHEIGHT, "670mainBody") != 0)
         return 1;
     if (initializeArtwork() != 0) {
         pixFinalize();

@@ -44,65 +44,66 @@ void reshGetIntersection(
         const isoIsometry *isom, const double p[3], const double d[3], 
         double bound, rayIntersection* inter) {
     meshMesh *mesh = (meshMesh *)data;
-    double bound = rayINFINITY;
-    int bestTriangle = -1;
-    //intersect with each triangler keeping track of which triangle is winning
+    double locP[3];
+    double locD[3];
+    rayIntersection bestInter;
+    bestInter.t = rayNONE;
+    // transform p and d to local coords
+    isoUntransformPoint(isom, p, locP);
+    isoUnrotateDirection(isom, d, locD);
+    //intersect with each triangle keeping track of which triangle is winning
     for (int i = 0; i < mesh->triNum; i++)
     {
-
         int *triangle = meshGetTrianglePointer(mesh, i);
-		double *a = meshGetVertexPointer(mesh, ithtriangle[0]);
-		double *b = meshGetVertexPointer(mesh, ithtriangle[1]);
-		double *c = meshGetVertexPointer(mesh, ithtriangle[2]);
-        rayIntersection inter;
-        bodyGetIntersection(triangle[i], p, d, bound, &inter);
-        if (inter.t != rayNONE)
-        {
-            bound = inter.t;
-            bestTriangle = i;
+		double *a = meshGetVertexPointer(mesh, triangle[0]);
+		double *b = meshGetVertexPointer(mesh, triangle[1]);
+		double *c = meshGetVertexPointer(mesh, triangle[2]);
+
+    
+
+        //compute n
+        double n[3];
+        double bMINa[3];
+        double cMINa[3];
+        vecSubtract(3, b, a, bMINa);
+        vecSubtract(3, c, a, cMINa);
+        vec3Cross(bMINa, cMINa, n);
+        
+        //compute t
+        double aMINp[3];
+        vecSubtract(3, a, locP, aMINp);
+        double nTIMESsubP = vecDot(3, n, aMINp);
+        double nTimesd = vecDot(3, n, locD);
+
+        if(nTimesd != 0){
+            //compute ratio
+            double t = nTIMESsubP / nTimesd;
+            // compute x
+            double x[3];
+            double tTimesd[3];
+            double xMinusc[3];
+
+            vecScale(3, t, locD, tTimesd);
+            vecAdd(3, locP, tTimesd, x);
+            // get p and q
+            double pq[2];
+            reshGetPQ(a, bMINa, cMINa, x, pq);
+
+            if (pq[0] >= 0 && pq[1] >= 0 && pq[0] + pq[1] <= 1)
+            {
+                bound = t;
+                bestInter.t = t;
+                bestInter.index = i;
+            }
+            //return rayIntersection
+            inter->t = bestInter.t;
+            inter->index = bestInter.index;
+
         }
+
     }
 
-    //compute x
-    double x[3];
-    double tTimesd[3];
-    double xMinusc[3];
 
-    vecScale(3, inter->t, d, tTimesd);
-    vecAdd(3, p, tTimesd, x);
-
-    //get p and q
-    double pq[2];
-    reshGetPQ(a, bMINa, cMINa, x, pq);
-    //compute n
-    double n[3];
-    double bMINA[3];
-    double cMINa[3];
-    vecSubtract(3, b, a, bMINa);
-    vecSubtract(3, c, a, cMINa);
-    vec3Cross(bMina, cMINa, n);
-
-    vecSubtract(3, a, pq[0], aMINp);//not sure if this correct
-    vecDot(3, n, aMINP, nTIMESsubP);
-    vecDot(3, n, d, nTimesd);
-
-    if (nTimesd == 0){
-        inter->t = rayNONE;
-        return;
-    }
-    else if(rayEPSILON > t || t > bound){
-        inter->t = rayNONE;
-        return;
-    }
-    if(pq[0] >= 0 && pq[1] >= 0 && pq[0]+pq[1] <= 1){
-        inter->t = t
-        inter->index = bestTriangle;
-        return;
-    }
-    else{
-        inter->t = rayNONE;
-        return;
-    }
                 
     
 }
@@ -120,41 +121,41 @@ void reshGetTexCoordsAndNormal(
     texCoords[1] = 0.5;
     vec3Set(0.0, 0.0, 1.0, normal);
 
-    double x[3];
-    double tTimesd[3];
-    double xMinusc[3];
+    // double x[3];
+    // double tTimesd[3];
+    // double xMinusc[3];
 
-    vecScale(3, inter->t, d, tTimesd);
-    vecAdd(3, p, tTimesd, x);
+    // vecScale(3, inter->t, d, tTimesd);
+    // vecAdd(3, p, tTimesd, x);
 
-    double locP[3];
-    double locD[3];
-    //transform p and d to local coords
-    isoUntransformPoint(isom, p, locP);
-    isoUnrotateDirection(isom, d, locD);
+    // double locP[3];
+    // double locD[3];
+    // //transform p and d to local coords
+    // isoUntransformPoint(isom, p, locP);
+    // isoUnrotateDirection(isom, d, locD);
 
-    int *bestTriangle = meshGetTrianglePointer(mesh, i);
+    // int *bestTriangle = meshGetTrianglePointer(mesh, mesh->triNum);
     
-    double *vertexA = meshGetVertexPointer(mesh, triangle[0]);
-    double *vertexB = meshGetVertexPointer(mesh, triangle[1]);
-    double *vertexC = meshGetVertexPointer(mesh, triangle[2]);
+    // double *vertexA = meshGetVertexPointer(mesh, triangle[0]);
+    // double *vertexB = meshGetVertexPointer(mesh, triangle[1]);
+    // double *vertexC = meshGetVertexPointer(mesh, triangle[2]);
 
-    double *bmina = vecSubtract(3, vertexB, vertexA, bmina);
-    double *cmina = vecSubtract(3, vertexC, vertexA, cmina);
+    // double *bmina = vecSubtract(3, vertexB, vertexA, bmina);
+    // double *cmina = vecSubtract(3, vertexC, vertexA, cmina);
 
-    double pq[2];
-    reshGetPQ(vertexA, bmina, cmina, x, pq);
-    double X[3];
-    double multp[3];
-    vecScale(3, pq[0], bmina, multp);
-    double multq[3];
-    vecScale(3, pq[1], cmina, multq);
-    double vertAdd[3];
-    vecAdd(3, vertexA, multp, vertAdd);
-    vecAdd(3, vertAdd, multq, X);
+    // double pq[2];
+    // reshGetPQ(vertexA, bmina, cmina, x, pq);
+    // double X[3];
+    // double multp[3];
+    // vecScale(3, pq[0], bmina, multp);
+    // double multq[3];
+    // vecScale(3, pq[1], cmina, multq);
+    // double vertAdd[3];
+    // vecAdd(3, vertexA, multp, vertAdd);
+    // vecAdd(3, vertAdd, multq, X);
 
-    vecUnit(3, X, normalizedX);
-    isoRotateDirection(isom, normalizedX, normal);
+    // vecUnit(3, X, normalizedX);
+    // isoRotateDirection(isom, normalizedX, normal);
 
 }
 
