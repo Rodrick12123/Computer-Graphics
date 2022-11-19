@@ -257,7 +257,7 @@ int initializeArtwork(void) {
     lightInitialize(&lights[1], LightunifDim2, getPositionalLighting);
     double lightUnif2[3] = {1.0,1.0,1.0};
     lightSetUniforms(&lights[1], 0, lightUnif2, 3);
-    //setting the lights isometry rotation
+    //setting the lights isometry translation
 
     double trans[3] = {1,1,2};
     isoSetTranslation(&lights[1].isometry, trans);
