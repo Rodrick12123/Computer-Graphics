@@ -45,6 +45,7 @@ void reshGetIntersection(
         double bound, rayIntersection* inter) {
     meshMesh *mesh = (meshMesh *)data;
     double bound = rayINFINITY;
+    int bestTriangle = -1;
     //intersect with each triangler keeping track of which triangle is winning
     for (int i = 0; i < mesh->triNum; i++)
     {
@@ -82,6 +83,27 @@ void reshGetIntersection(
     vec3Cross(bMina, cMINa, n);
 
     vecSubtract(3, a, pq[0], aMINp);//not sure if this correct
+    vecDot(3, n, aMINP, nTIMESsubP);
+    vecDot(3, n, d, nTimesd);
+
+    if (nTimesd == 0){
+        inter->t = rayNONE;
+        return;
+    }
+    else if(rayEPSILON > t || t > bound){
+        inter->t = rayNONE;
+        return;
+    }
+    if(pq[0] >= 0 && pq[1] >= 0 && pq[0]+pq[1] <= 1){
+        inter->t = t
+        inter->index = bestTriangle;
+        return;
+    }
+    else{
+        inter->t = rayNONE;
+        return;
+    }
+                
     
 }
 
