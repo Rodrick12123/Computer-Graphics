@@ -44,7 +44,7 @@ double cameraTarget[3] = {0.0, 0.0, 0.0};
 double cameraRho = 10.0, cameraPhi = M_PI / 3.0, cameraTheta = M_PI / 3.0;
 
 /* Four spheres. */
-#define BODYNUM 5
+#define BODYNUM 6
 #define LIGHTNUM 2
 
 bodyBody bodyArray[BODYNUM]; 
@@ -216,10 +216,16 @@ int initializeArtwork(void) {
     bodySetTexture(&bodyArray[4], 0, &texture4);
     bodySetMaterialUniforms(&bodyArray[4], 0, matUnif, 4);
 
+    //initializing mesh
+    mesh3DInitializeBox(&mesh,-0.5,0.5,-0.5,0.5,-0.5,0.5);
+
     //6th body
-    if(mesh3DInitializeBox(&mesh,-0.5,0.5,-0.5,0.5,-0.5,0.5) != 0){
-        texFinalize(&texture2);
-    }
+     bodyInitialize(&bodyArray[5], reshUNIFDIM, 4, 1, reshGetIntersection, 
+    reshGetTexCoordsAndNormal, getPhongMaterial);
+    bodySetTexture(&bodyArray[5], 0, &texture4);
+    
+        
+    
     
 
 
