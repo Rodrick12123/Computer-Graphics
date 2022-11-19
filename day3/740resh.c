@@ -44,7 +44,45 @@ void reshGetIntersection(
         const isoIsometry *isom, const double p[3], const double d[3], 
         double bound, rayIntersection* inter) {
     meshMesh *mesh = (meshMesh *)data;
-    /* YOUR CODE GOES HERE. (MINE IS 22 LINES WITH A BIG HELPER FUNCTION.) */
+    double bound = rayINFINITY;
+    //intersect with each triangler keeping track of which triangle is winning
+    for (int i = 0; i < mesh->triNum; i++)
+    {
+
+        int *triangle = meshGetTrianglePointer(mesh, i);
+		double *a = meshGetVertexPointer(mesh, ithtriangle[0]);
+		double *b = meshGetVertexPointer(mesh, ithtriangle[1]);
+		double *c = meshGetVertexPointer(mesh, ithtriangle[2]);
+        rayIntersection inter;
+        bodyGetIntersection(triangle[i], p, d, bound, &inter);
+        if (inter.t != rayNONE)
+        {
+            bound = inter.t;
+            bestTriangle = i;
+        }
+    }
+
+    //compute x
+    double x[3];
+    double tTimesd[3];
+    double xMinusc[3];
+
+    vecScale(3, inter->t, d, tTimesd);
+    vecAdd(3, p, tTimesd, x);
+
+    //get p and q
+    double pq[2];
+    reshGetPQ(a, bMINa, cMINa, x, pq);
+    //compute n
+    double n[3];
+    double bMINA[3];
+    double cMINa[3];
+    vecSubtract(3, b, a, bMINa);
+    vecSubtract(3, c, a, cMINa);
+    vec3Cross(bMina, cMINa, n);
+
+    vecSubtract(3, a, pq[0], aMINp);//not sure if this correct
+    
 }
 
 /* An implementation of getTexCoordsAndNormal for bodies that are reshes. 
@@ -72,25 +110,29 @@ void reshGetTexCoordsAndNormal(
     //transform p and d to local coords
     isoUntransformPoint(isom, p, locP);
     isoUnrotateDirection(isom, d, locD);
-    int *triangle = meshGetTrianglePointer(mesh, mesh.triNum);
+
+    int *bestTriangle = meshGetTrianglePointer(mesh, i);
     
     double *vertexA = meshGetVertexPointer(mesh, triangle[0]);
     double *vertexB = meshGetVertexPointer(mesh, triangle[1]);
     double *vertexC = meshGetVertexPointer(mesh, triangle[2]);
 
-    double *bmina = vecSubtract(2, vertexB, vertexA, bmina);
-    double *cmina = vecSubtract(2, vertexC, vertexA, cmina);
+    double *bmina = vecSubtract(3, vertexB, vertexA, bmina);
+    double *cmina = vecSubtract(3, vertexC, vertexA, cmina);
 
     double pq[2];
     reshGetPQ(vertexA, bmina, cmina, x, pq);
-    double X[2];
-    double multp[2];
-    vecScale(2, pq[0], bmina, multp);
-    double multq[2];
-    vecScale(2, pq[1], cmina, multq);
-    double vertAdd[2];
-    vecAdd(2, vertexA, multp, vertAdd);
-    vecAdd(2, vertAdd, multq, X);
+    double X[3];
+    double multp[3];
+    vecScale(3, pq[0], bmina, multp);
+    double multq[3];
+    vecScale(3, pq[1], cmina, multq);
+    double vertAdd[3];
+    vecAdd(3, vertexA, multp, vertAdd);
+    vecAdd(3, vertAdd, multq, X);
+
+    vecUnit(3, X, normalizedX);
+    isoRotateDirection(isom, normalizedX, normal);
 
 }
 
