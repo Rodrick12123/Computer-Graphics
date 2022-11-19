@@ -220,10 +220,10 @@ int initializeArtwork(void) {
     mesh3DInitializeBox(&mesh,-0.5,0.5,-0.5,0.5,-0.5,0.5);
 
     //6th body
-     bodyInitialize(&bodyArray[5], reshUNIFDIM, 4, 1, reshGetIntersection, 
+    bodyInitialize(&bodyArray[5], reshUNIFDIM, 4, 1, reshGetIntersection, 
     reshGetTexCoordsAndNormal, getPhongMaterial);
     bodySetTexture(&bodyArray[5], 0, &texture4);
-    
+    bodySetMaterialUniforms(&bodyArray[5], 0, matUnif, 4);
         
     
     
@@ -239,7 +239,8 @@ int initializeArtwork(void) {
     isoSetTranslation(&bodyArray[3].isometry, transl);
     vec3Set(0.0,0,-1, transl);
     isoSetTranslation(&bodyArray[4].isometry, transl);
-    vec3Set(1.0,0.0,0.0, transl);
+    vec3Set(2.0,1.5,0.0, transl);
+    isoSetTranslation(&bodyArray[5].isometry, transl);
 
     //initalizing lights
     int LightunifDim = 3;
@@ -269,6 +270,8 @@ void finalizeArtwork(void) {
     bodyFinalize(&bodyArray[1]);
     bodyFinalize(&bodyArray[2]);
     bodyFinalize(&bodyArray[3]);
+    bodyFinalize(&bodyArray[4]);
+    bodyFinalize(&bodyArray[5]);
     texFinalize(&texture);
     texFinalize(&texture2);
     texFinalize(&texture3);
