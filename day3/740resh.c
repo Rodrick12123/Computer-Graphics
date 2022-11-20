@@ -117,46 +117,52 @@ void reshGetTexCoordsAndNormal(
         const rayIntersection *inter, double texCoords[2], double normal[3]) {
     meshMesh *mesh = (meshMesh *)data;
     /* REPLACE THESE THREE LINES WITH YOUR CODE. (MINE IS 17 LINES.) */
-    texCoords[0] = 0.5;
-    texCoords[1] = 0.5;
-    vec3Set(0.0, 0.0, 1.0, normal);
+    // texCoords[0] = 0.5;
+    // texCoords[1] = 0.5;
 
-    // double x[3];
-    // double tTimesd[3];
-    // double xMinusc[3];
-
-    // vecScale(3, inter->t, d, tTimesd);
-    // vecAdd(3, p, tTimesd, x);
-
-    // double locP[3];
-    // double locD[3];
-    // //transform p and d to local coords
-    // isoUntransformPoint(isom, p, locP);
-    // isoUnrotateDirection(isom, d, locD);
-
-    // int *bestTriangle = meshGetTrianglePointer(mesh, mesh->triNum);
     
-    // double *vertexA = meshGetVertexPointer(mesh, triangle[0]);
-    // double *vertexB = meshGetVertexPointer(mesh, triangle[1]);
-    // double *vertexC = meshGetVertexPointer(mesh, triangle[2]);
+    double locP[3];
+    double locD[3];
+    //transform p and d to local coords
+    isoUntransformPoint(isom, p, locP);
+    isoUnrotateDirection(isom, d, locD);
+    //calculate x(t)
+    double x[3];
+    double tTimesd[3];
+    double xMinusc[3];
 
-    // double *bmina = vecSubtract(3, vertexB, vertexA, bmina);
-    // double *cmina = vecSubtract(3, vertexC, vertexA, cmina);
+    vecScale(3, inter->t, locD, tTimesd);
+    vecAdd(3, locP, tTimesd, x);
+    //triangle info
+    int *triangle = meshGetTrianglePointer(mesh, inter->index);
+    
+    double *vertexA = meshGetVertexPointer(mesh, triangle[0]);
+    double *vertexB = meshGetVertexPointer(mesh, triangle[1]);
+    double *vertexC = meshGetVertexPointer(mesh, triangle[2]);
 
-    // double pq[2];
-    // reshGetPQ(vertexA, bmina, cmina, x, pq);
-    // double X[3];
-    // double multp[3];
-    // vecScale(3, pq[0], bmina, multp);
-    // double multq[3];
-    // vecScale(3, pq[1], cmina, multq);
-    // double vertAdd[3];
-    // vecAdd(3, vertexA, multp, vertAdd);
-    // vecAdd(3, vertAdd, multq, X);
+    double bmina[8];
+    vecSubtract(8, vertexB, vertexA, bmina);
+    double cmina[8];
+    vecSubtract(8, vertexC, vertexA, cmina);
 
-    // vecUnit(3, X, normalizedX);
-    // isoRotateDirection(isom, normalizedX, normal);
+    double pq[2];
+    reshGetPQ(vertexA, bmina, cmina, x, pq);
 
+    double X[8];
+    double multp[8];
+    vecScale(8, pq[0], bmina, multp);
+    double multq[8];
+    vecScale(8, pq[1], cmina, multq);
+    double vertAdd[8];
+    vecAdd(8, vertexA, multp, vertAdd);
+    vecAdd(8, vertAdd, multq, X);
+
+    double normalizedX[3];
+    double nop[3] = {X[5], X[6], X[7]};
+    vecUnit(3, nop, normalizedX);
+    isoRotateDirection(isom, normalizedX, normal);
+    texCoords[0] = X[3];
+    texCoords[1] = X[4];
 }
 
 

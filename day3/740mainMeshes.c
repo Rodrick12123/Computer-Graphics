@@ -222,9 +222,9 @@ int initializeArtwork(void) {
     //6th body
     bodyInitialize(&bodyArray[5], reshUNIFDIM, 4, 1, reshGetIntersection, 
     reshGetTexCoordsAndNormal, getPhongMaterial);
-    bodySetTexture(&bodyArray[5], 0, &texture4);
+    bodySetTexture(&bodyArray[5], 0, &texture3);
     bodySetMaterialUniforms(&bodyArray[5], 0, matUnif, 4);
-        
+    bodySetGeometryData(&bodyArray[5], &mesh);    
     
     
 
@@ -540,7 +540,12 @@ void handleTimeStep(double oldTime, double newTime) {
     double rotMatrix[3][3];
     mat33AngleAxisRotation(newTime, rotAxis, rotMatrix);
     for (int k = 0; k < BODYNUM - 1; k += 1)
-        isoSetRotation(&(bodyArray[k].isometry), rotMatrix);
+        if (k != 4)
+        {
+            isoSetRotation(&(bodyArray[k].isometry), rotMatrix);
+        }
+        
+        
     render();
 }
 
