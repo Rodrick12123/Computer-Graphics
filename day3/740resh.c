@@ -78,34 +78,32 @@ void reshGetIntersection(
         if(nTimesd != 0){
             //compute ratio
             double t = nTIMESsubP / nTimesd;
-            // compute x
-            double x[3];
-            double tTimesd[3];
-            double xMinusc[3];
-
-            vecScale(3, t, locD, tTimesd);
-            vecAdd(3, locP, tTimesd, x);
-            // get p and q
-            double pq[2];
-            reshGetPQ(a, bMINa, cMINa, x, pq);
-
-            if (pq[0] >= 0 && pq[1] >= 0 && pq[0] + pq[1] <= 1)
+            if (rayEPSILON <= t && t <= bound )
             {
-                bound = t;
-                bestInter.t = t;
-                bestInter.index = i;
+                double x[3];
+                double tTimesd[3];
+                double xMinusc[3];
+
+                vecScale(3, t, locD, tTimesd);
+                vecAdd(3, locP, tTimesd, x);
+                // get p and q
+                double pq[2];
+                reshGetPQ(a, bMINa, cMINa, x, pq);
+
+                if (pq[0] >= 0 && pq[1] >= 0 && pq[0] + pq[1] <= 1)
+                {
+                    bound = t;
+                    bestInter.t = t;
+                    bestInter.index = i;
+                }
             }
-            //return rayIntersection
-            inter->t = bestInter.t;
-            inter->index = bestInter.index;
+            
 
         }
-
     }
+    inter->t = bestInter.t;
+    inter->index = bestInter.index;
 
-
-                
-    
 }
 
 /* An implementation of getTexCoordsAndNormal for bodies that are reshes. 
